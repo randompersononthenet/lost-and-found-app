@@ -78,6 +78,7 @@ export default function CreatePostScreen() {
       // Reset form
       setTitle('');
       setDescription('');
+      setCategory('lost');
       setLocation('');
       setDateLostFound('');
       setImage(null);
@@ -89,7 +90,7 @@ export default function CreatePostScreen() {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to create post. Please try again.',
+        text2: error instanceof Error ? error.message : 'Failed to create post. Please try again.',
       });
     } finally {
       setLoading(false);
@@ -110,7 +111,8 @@ export default function CreatePostScreen() {
           style={[
             styles.submitButton,
             {
-              backgroundColor: (!title.trim() || !description.trim()) ? colors.border : colors.primary,
+              backgroundColor: (loading || !title.trim() || !description.trim()) ? colors.border : colors.primary,
+              opacity: (loading || !title.trim() || !description.trim()) ? 0.6 : 1,
             }
           ]}
         >
@@ -234,7 +236,15 @@ export default function CreatePostScreen() {
             onPress={pickImage}
           >
             {image ? (
-              <Image source={{ uri: image }} style={styles.selectedImage} />
+              <View style={styles.imageContainer}>
+                <Image source={{ uri: image }} style={styles.selectedImage} />
+                <TouchableOpacity
+                  style={[styles.removeImageButton, { backgroundColor: colors.error }]}
+                  onPress={() => setImage(null)}
+                >
+                  <Text style={[styles.removeImageText, { color: colors.card }]}>×</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               <>
                 <Camera size={32} color={colors.textSecondary} />
@@ -245,6 +255,23 @@ export default function CreatePostScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        {/* Additional Submit Button at Bottom */}
+        <TouchableOpacity
+          onPress={handleSubmit}
+          disabled={loading || !title.trim() || !description.trim()}
+          style={[
+            styles.bottomSubmitButton,
+            {
+              backgroundColor: (loading || !title.trim() || !description.trim()) ? colors.border : colors.primary,
+              opacity: (loading || !title.trim() || !description.trim()) ? 0.6 : 1,
+            }
+          ]}
+        >
+          <Text style={[styles.bottomSubmitButtonText, { color: colors.card }]}>
+            {loading ? 'Creating Post...' : 'Create Post'}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -350,5 +377,36 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 6,
+  },
+  imageContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeImageText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    lineHeight: 20,
+  },
+  bottomSubmitButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 32,
+  },
+  bottomSubmitButtonText: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
   },
 });
