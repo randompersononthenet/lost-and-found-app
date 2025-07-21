@@ -64,7 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No profile found - this is expected for new users
+          setProfile(null);
+          return;
+        }
         console.error('Error loading profile:', error);
         return;
       }
@@ -73,8 +78,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(data);
       }
     } catch (error) {
-      // Only log unexpected errors
-      if (error && typeof error === 'object' && 'code' in error && error.code !== 'PGRST116') {
+      // Check if the caught error is the PGRST116 error and suppress it
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST116') {
+        setProfile(null);
+        return;
+      }
+      // Log other unexpected errors
+      if (error) {
         console.error('Error loading profile:', error);
       }
     }
