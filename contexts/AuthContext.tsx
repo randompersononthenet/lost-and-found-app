@@ -149,19 +149,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
 
     if (data.user) {
-      // Create profile
-      const { error: profileError } = await supabase
+      // Create profile and wait for it to be created
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert({
           id: data.user.id,
           email: data.user.email!,
           full_name: fullName,
-        });
+        })
+        .select()
+        .single();
 
       if (profileError) throw profileError;
       
-      // Load the newly created profile
-      await loadProfile(data.user.id);
+      // Set the profile directly from the insert result
+      if (profileData && mounted) {
+        setProfile(profileData);
+      }
     }
   };
 
