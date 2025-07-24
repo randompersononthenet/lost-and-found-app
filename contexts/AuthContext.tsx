@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -31,10 +31,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useRef(false);
 
   const loadProfile = async (userId: string) => {
-    if (!mounted) return;
+    if (!mounted.current) return;
     
     try {
       const { data, error } = await supabase
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    setMounted(true);
+    mounted.current = true;
     
     const initializeAuth = async () => {
       try {
@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
-        if (mounted) {
+        if (mounted.current) {
           setLoading(false);
         }
       }
@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted) return;
+        if (!mounted.current) return;
         
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setProfile(null);
         }
-        if (mounted) {
+        if (mounted.current) {
           setLoading(false);
         }
       }
@@ -110,13 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       subscription.unsubscribe();
-      setMounted(false);
+      mounted.current = false;
     };
-  }, [mounted]);
-
-  if (!mounted) {
-    return null;
-  }
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     if (!email.endsWith('.edu')) {
@@ -136,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Please use your educational email address');
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -146,25 +142,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
-    if (error) throw error;
+    if (authError) throw authError;
 
-    if (data.user) {
+    if (authData.user) {
       // Create profile and wait for it to be created
-      const { data: profileData, error: profileError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .insert({
-          id: data.user.id,
-          email: data.user.email!,
+          id: authData.user.id,
+          email: authData.user.email!,
           full_name: fullName,
         })
         .select()
         .single();
 
-      if (profileError) throw profileError;
+      if (error) {
+        console.error('Profile creation error:', error);
+        throw new Error('Failed to create user profile');
+      }
       
       // Set the profile directly from the insert result
-      if (profileData && mounted) {
-        setProfile(profileData);
+      if (data && mounted.current) {
+        setProfile(data);
       }
     }
   };
