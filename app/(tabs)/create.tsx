@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +8,7 @@ import { Camera, MapPin, Calendar } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import * as FileSystem from 'expo-file-system';
 
 export default function CreatePostScreen() {
   const { colors } = useTheme();
@@ -21,21 +22,51 @@ export default function CreatePostScreen() {
   const [loading, setLoading] = useState(false);
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    // Check current permission status
+    const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to add images!');
-      return;
+      // Ask for permission if possible
+      const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (newStatus !== 'granted') {
+        Alert.alert(
+          'Permission needed',
+          'Sorry, we need camera roll permissions to add images! Please enable permissions in your device settings.',
+          [
+            {
+              text: 'Open Settings',
+              onPress: () => Linking.openSettings(),
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+        return;
+      }
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: [ImagePicker.MediaType.Images],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    if (!result.canceled && result.assets[0]) {
+      if (result.canceled || !result.assets || !result.assets[0]) {
+        Toast.show({
+          type: 'info',
+          text1: 'No Image Selected',
+          text2: 'You did not select any image.',
+        });
+        return;
+      }
+
       setImage(result.assets[0].uri);
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Image Picker Error',
+        text2: error instanceof Error ? error.message : 'Failed to pick image.',
+      });
     }
   };
 
@@ -51,7 +82,42 @@ export default function CreatePostScreen() {
 
     setLoading(true);
 
+    let imageUrls: string[] = [];
+
     try {
+      // 1. Upload image to Supabase Storage if one is selected
+      if (image) {
+        const fileExt = image.split('.').pop();
+        const fileName = `${user.id}_${Date.now()}.${fileExt || 'jpg'}`;
+        const fileUri = image;
+        const fileType = 'image/jpeg';
+
+        // Read file as base64
+        const fileBase64 = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
+        const fileBuffer = Buffer.from(fileBase64, 'base64');
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('post-images')
+          .upload(fileName, fileBuffer, {
+            contentType: fileType,
+            upsert: true,
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // Get public URL
+        const { data: publicUrlData } = supabase.storage.from('post-images').getPublicUrl(fileName);
+        if (publicUrlData && publicUrlData.publicUrl) {
+          imageUrls = [publicUrlData.publicUrl];
+        } else {
+          throw new Error('Failed to get public URL for uploaded image.');
+        }
+      }
+
+      // 2. Insert post with public image URL(s)
       const postData = {
         user_id: user.id,
         title: title.trim(),
@@ -59,7 +125,7 @@ export default function CreatePostScreen() {
         category,
         location: location.trim() || null,
         date_lost_found: dateLostFound || null,
-        images: image ? [image] : [],
+        images: imageUrls,
         status: 'active',
       };
 
