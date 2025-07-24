@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Please use your educational email address');
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -142,25 +142,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
-    if (error) throw error;
+    if (authError) throw authError;
 
-    if (data.user) {
+    if (authData.user) {
       // Create profile and wait for it to be created
-      const { data: profileData, error: profileError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .insert({
-          id: data.user.id,
-          email: data.user.email!,
+          id: authData.user.id,
+          email: authData.user.email!,
           full_name: fullName,
         })
         .select()
         .single();
 
-      if (profileError) throw profileError;
+      if (error) {
+        console.error('Profile creation error:', error);
+        throw new Error('Failed to create user profile');
+      }
       
       // Set the profile directly from the insert result
-      if (profileData && mounted.current) {
-        setProfile(profileData);
+      if (data && mounted.current) {
+        setProfile(data);
       }
     }
   };
