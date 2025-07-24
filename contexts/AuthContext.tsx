@@ -154,11 +154,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('profiles')
         .insert({
           id: data.user.id,
-          email: data.user.email,
+          email: data.user.email!,
           full_name: fullName,
         });
 
       if (profileError) throw profileError;
+      
+      // Load the newly created profile
+      await loadProfile(data.user.id);
     }
   };
 
