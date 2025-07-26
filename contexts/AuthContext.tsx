@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    if (!email.endsWith('.edu')) {
+    if (!email.endsWith('.edu.ph')) {
       throw new Error('Please use your educational email address');
     }
 
