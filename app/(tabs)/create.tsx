@@ -18,10 +18,10 @@ export default function CreatePostScreen() {
   const [category, setCategory] = useState<'lost' | 'found'>('lost');
   const [location, setLocation] = useState('');
   const [dateLostFound, setDateLostFound] = useState('');
-  const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const pickImage = async () => {
+  const pickImages = async () => {
     // Check current permission status
     const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -46,28 +46,45 @@ export default function CreatePostScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsEditing: false, // Disable editing for multiple images
+        allowsMultipleSelection: true, // Enable multiple selection
         quality: 0.8,
       });
 
-      if (result.canceled || !result.assets || !result.assets[0]) {
+      if (result.canceled || !result.assets || result.assets.length === 0) {
         Toast.show({
           type: 'info',
-          text1: 'No Image Selected',
-          text2: 'You did not select any image.',
+          text1: 'No Images Selected',
+          text2: 'You did not select any images.',
         });
         return;
       }
 
-      setImage(result.assets[0].uri);
+      // Add new images to existing ones (max 5 images)
+      const newImages = result.assets.map(asset => asset.uri);
+      const totalImages = images.length + newImages.length;
+      
+      if (totalImages > 5) {
+        Toast.show({
+          type: 'error',
+          text1: 'Too Many Images',
+          text2: 'You can only upload up to 5 images per post.',
+        });
+        return;
+      }
+
+      setImages(prev => [...prev, ...newImages]);
     } catch (error) {
       Toast.show({
         type: 'error',
         text1: 'Image Picker Error',
-        text2: error instanceof Error ? error.message : 'Failed to pick image.',
+        text2: error instanceof Error ? error.message : 'Failed to pick images.',
       });
     }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
@@ -85,39 +102,60 @@ export default function CreatePostScreen() {
     let imageUrls: string[] = [];
 
     try {
-      // 1. Upload image to Supabase Storage if one is selected
-      if (image) {
-        const fileExt = image.split('.').pop();
-        const fileName = `${user.id}_${Date.now()}.${fileExt || 'jpg'}`;
-        const fileUri = image;
-        const fileType = 'image/jpeg';
+      // Test Supabase connection first
+      console.log('Testing Supabase connection...');
+      try {
+        const { data: testData, error: testError } = await supabase
+          .from('posts')
+          .select('id')
+          .limit(1);
+        
+        console.log('Database connection test:', testError ? 'Failed' : 'Success');
+      } catch (error) {
+        console.error('Database connection test failed:', error);
+      }
 
-        // Read file as base64
-        const fileBase64 = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
-        const fileBuffer = Buffer.from(fileBase64, 'base64');
+      // 1. Upload multiple images to Supabase Storage
+      if (images.length > 0) {
+        console.log(`Uploading ${images.length} images...`);
+        
+        for (let i = 0; i < images.length; i++) {
+          const imageUri = images[i];
+          console.log(`Uploading image ${i + 1}/${images.length}: ${imageUri}`);
+          
+          const fileExt = imageUri.split('.').pop();
+          const fileName = `${user.id}_${Date.now()}_${i}.${fileExt || 'jpg'}`;
+          const fileType = 'image/jpeg';
 
-        // Upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('post-images')
-          .upload(fileName, fileBuffer, {
-            contentType: fileType,
-            upsert: true,
-          });
+          // Convert base64 to proper format for Supabase Storage
+          const fileBase64 = await FileSystem.readAsStringAsync(imageUri, { encoding: FileSystem.EncodingType.Base64 });
+          const fileBuffer = Uint8Array.from(atob(fileBase64), c => c.charCodeAt(0));
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('post-images')
+            .upload(fileName, fileBuffer, {
+              contentType: fileType,
+              upsert: false,
+            });
 
-        if (uploadError) {
-          throw uploadError;
-        }
+          if (uploadError) {
+            console.error(`Upload error for image ${i + 1}:`, uploadError.message);
+            throw uploadError;
+          }
 
-        // Get public URL
-        const { data: publicUrlData } = supabase.storage.from('post-images').getPublicUrl(fileName);
-        if (publicUrlData && publicUrlData.publicUrl) {
-          imageUrls = [publicUrlData.publicUrl];
-        } else {
-          throw new Error('Failed to get public URL for uploaded image.');
+          // Get public URL
+          const { data: publicUrlData } = supabase.storage.from('post-images').getPublicUrl(fileName);
+          if (publicUrlData && publicUrlData.publicUrl) {
+            imageUrls.push(publicUrlData.publicUrl);
+            console.log(`Image ${i + 1} uploaded successfully:`, publicUrlData.publicUrl);
+          } else {
+            throw new Error(`Failed to get public URL for image ${i + 1}.`);
+          }
         }
       }
 
-      // 2. Insert post with public image URL(s)
+      // 2. Insert post with public image URLs
+      console.log('Creating post with image URLs:', imageUrls);
       const postData = {
         user_id: user.id,
         title: title.trim(),
@@ -147,7 +185,7 @@ export default function CreatePostScreen() {
       setCategory('lost');
       setLocation('');
       setDateLostFound('');
-      setImage(null);
+      setImages([]);
 
       // Navigate back to feed
       router.push('/(tabs)');
@@ -296,26 +334,38 @@ export default function CreatePostScreen() {
 
         {/* Image */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Photo</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Photos (Max 5)</Text>
           <TouchableOpacity
             style={[styles.imagePickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={pickImage}
+            onPress={pickImages}
           >
-            {image ? (
-              <View style={styles.imageContainer}>
-                <Image source={{ uri: image }} style={styles.selectedImage} />
-                <TouchableOpacity
-                  style={[styles.removeImageButton, { backgroundColor: colors.error }]}
-                  onPress={() => setImage(null)}
-                >
-                  <Text style={[styles.removeImageText, { color: colors.card }]}>×</Text>
-                </TouchableOpacity>
+            {images.length > 0 ? (
+              <View style={styles.imagesGrid}>
+                {images.map((imageUri, index) => (
+                  <View key={index} style={styles.imageContainer}>
+                    <Image source={{ uri: imageUri }} style={styles.selectedImage} />
+                    <TouchableOpacity
+                      style={[styles.removeImageButton, { backgroundColor: colors.error }]}
+                      onPress={() => removeImage(index)}
+                    >
+                      <Text style={[styles.removeImageText, { color: colors.card }]}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {images.length < 5 && (
+                  <View style={[styles.addMoreButton, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <Camera size={24} color={colors.textSecondary} />
+                    <Text style={[styles.addMoreText, { color: colors.textSecondary }]}>
+                      Add More
+                    </Text>
+                  </View>
+                )}
               </View>
             ) : (
               <>
                 <Camera size={32} color={colors.textSecondary} />
                 <Text style={[styles.imagePickerText, { color: colors.textSecondary }]}>
-                  Add Photo
+                  Add Photos
                 </Text>
               </>
             )}
@@ -427,42 +477,67 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
   },
   imagePickerButton: {
-    height: 120,
+    minHeight: 120,
     borderRadius: 8,
     borderWidth: 2,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 16,
   },
   imagePickerText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
     marginTop: 8,
   },
+  imagesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    width: '100%',
+  },
+  imageContainer: {
+    width: 80,
+    height: 80,
+    position: 'relative',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
   selectedImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 6,
-  },
-  imageContainer: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
+    borderRadius: 8,
   },
   removeImageButton: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 0, 0, 0.8)',
+  },
+  removeImageText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Bold',
+    lineHeight: 16,
+    color: 'white',
+  },
+  addMoreButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removeImageText: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    lineHeight: 20,
+  addMoreText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    marginTop: 4,
   },
   bottomSubmitButton: {
     paddingVertical: 16,
