@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Image, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Heart, MessageCircle, Share, MapPin, Calendar } from 'lucide-react-native';
+import { Heart, MessageCircle, Share, MapPin, Calendar, X } from 'lucide-react-native';
 import { router } from 'expo-router';
 
 interface Post {
@@ -31,6 +31,8 @@ export default function FeedScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -140,25 +142,35 @@ export default function FeedScreen() {
     return date.toLocaleDateString();
   };
 
+  const openImageModal = (imageUri: string) => {
+    setSelectedImage(imageUri);
+    setImageModalVisible(true);
+  };
+
+  const closeImageModal = () => {
+    setImageModalVisible(false);
+    setSelectedImage(null);
+  };
+
   const renderPost = ({ item }: { item: Post }) => (
     <View style={[styles.postCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      {/* Header */}
+      {/* Post Header */}
       <View style={styles.postHeader}>
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           <Text style={[styles.avatarText, { color: colors.card }]}>
             {item.profiles.full_name.charAt(0).toUpperCase()}
           </Text>
         </View>
-        <View style={styles.postInfo}>
+        <View style={styles.userInfo}>
           <Text style={[styles.userName, { color: colors.text }]}>
             {item.profiles.full_name}
           </Text>
-          <Text style={[styles.postTime, { color: colors.textSecondary }]}>
+          <Text style={[styles.postDate, { color: colors.textSecondary }]}>
             {formatDate(item.created_at)}
           </Text>
         </View>
         <View style={[
-          styles.categoryBadge, 
+          styles.categoryBadge,
           { backgroundColor: item.category === 'lost' ? colors.error : colors.success }
         ]}>
           <Text style={[styles.categoryText, { color: colors.card }]}>
@@ -167,7 +179,7 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      {/* Content */}
+      {/* Post Content */}
       <View style={styles.postContent}>
         <Text style={[styles.postTitle, { color: colors.text }]}>
           {item.title}
@@ -200,11 +212,40 @@ export default function FeedScreen() {
 
         {/* Images */}
         {item.images && item.images.length > 0 && (
-          <Image
-            source={{ uri: item.images[0] }}
-            style={[styles.postImage, { borderColor: colors.border }]}
-            resizeMode="cover"
-          />
+          <View style={styles.imagesContainer}>
+            {item.images.length === 1 ? (
+              <TouchableOpacity onPress={() => openImageModal(item.images[0])}>
+                <Image
+                  source={{ uri: item.images[0] }}
+                  style={[styles.singleImage, { borderColor: colors.border }]}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.imagesGrid}>
+                {item.images.slice(0, 4).map((imageUri, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={styles.gridImageContainer}
+                    onPress={() => openImageModal(imageUri)}
+                  >
+                    <Image
+                      source={{ uri: imageUri }}
+                      style={[styles.gridImage, { borderColor: colors.border }]}
+                      resizeMode="cover"
+                    />
+                    {index === 3 && item.images.length > 4 && (
+                      <View style={[styles.moreImagesOverlay, { backgroundColor: colors.overlay }]}>
+                        <Text style={[styles.moreImagesText, { color: colors.card }]}>
+                          +{item.images.length - 4}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
         )}
       </View>
 
@@ -261,6 +302,37 @@ export default function FeedScreen() {
         contentContainerStyle={styles.feedContent}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* Image Modal */}
+      <Modal
+        visible={imageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeImageModal}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackground} 
+            onPress={closeImageModal}
+            activeOpacity={1}
+          />
+          <View style={styles.modalContent}>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={closeImageModal}
+            >
+              <X size={24} color={colors.card} />
+            </TouchableOpacity>
+            {selectedImage && (
+              <Image
+                source={{ uri: selectedImage }}
+                style={styles.modalImage}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -298,15 +370,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
   avatarText: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter-Bold',
   },
-  postInfo: {
+  userInfo: {
     flex: 1,
   },
   userName: {
@@ -314,7 +386,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     marginBottom: 2,
   },
-  postTime: {
+  postDate: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
   },
@@ -324,9 +396,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   categoryText: {
-    fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
   },
   postContent: {
     paddingHorizontal: 16,
@@ -344,27 +415,63 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   postMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
     marginBottom: 12,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    gap: 4,
   },
   metaText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    marginLeft: 6,
   },
-  postImage: {
+  imagesContainer: {
+    marginBottom: 12,
+  },
+  singleImage: {
     width: '100%',
     height: 200,
     borderRadius: 8,
     borderWidth: 1,
   },
+  imagesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 2,
+  },
+  gridImageContainer: {
+    width: '50%',
+    aspectRatio: 1,
+    position: 'relative',
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  moreImagesOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  moreImagesText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: 'white',
+  },
   postActions: {
     flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
@@ -373,10 +480,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 24,
+    gap: 4,
   },
   actionText: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Inter-Medium',
-    marginLeft: 4,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  modalContent: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 1,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
