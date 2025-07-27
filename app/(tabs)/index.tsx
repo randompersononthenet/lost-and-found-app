@@ -203,6 +203,13 @@ export default function FeedScreen() {
     );
   };
 
+  const handleViewComments = (postId: string) => {
+    router.push({
+      pathname: '/comments',
+      params: { postId }
+    });
+  };
+
   const renderPost = ({ item }: { item: Post }) => (
     <View style={[styles.postCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {/* Post Header */}
@@ -336,7 +343,10 @@ export default function FeedScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => handleViewComments(item.id)}
+        >
           <MessageCircle size={20} color={colors.textSecondary} />
           <Text style={[styles.actionText, { color: colors.textSecondary }]}>
             {item.comments[0]?.count || 0}
