@@ -239,7 +239,7 @@ export default function FeedScreen() {
           
           {/* Edit/Delete buttons for post owner */}
           {user && item.user_id === user.id && (
-            <View style={styles.postActions}>
+            <View style={styles.postHeaderActions}>
               <TouchableOpacity
                 style={styles.actionIcon}
                 onPress={() => handleEditPost(item)}
@@ -301,26 +301,116 @@ export default function FeedScreen() {
               </TouchableOpacity>
             ) : (
               <View style={styles.imagesGrid}>
-                {item.images.slice(0, 4).map((imageUri, index) => (
-                  <TouchableOpacity 
-                    key={index} 
-                    style={styles.gridImageContainer}
-                    onPress={() => openImageModal(imageUri)}
-                  >
-                    <Image
-                      source={{ uri: imageUri }}
-                      style={[styles.gridImage, { borderColor: colors.border }]}
-                      resizeMode="cover"
-                    />
-                    {index === 3 && item.images.length > 4 && (
-                      <View style={[styles.moreImagesOverlay, { backgroundColor: colors.overlay }]}>
-                        <Text style={[styles.moreImagesText, { color: colors.card }]}>
-                          +{item.images.length - 4}
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
+                {item.images.length === 2 ? (
+                  // 2 images: side by side
+                  <>
+                    <TouchableOpacity 
+                      style={[styles.gridImageContainer, styles.gridImageLeft]}
+                      onPress={() => openImageModal(item.images[0])}
+                    >
+                      <Image
+                        source={{ uri: item.images[0] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.gridImageContainer, styles.gridImageRight]}
+                      onPress={() => openImageModal(item.images[1])}
+                    >
+                      <Image
+                        source={{ uri: item.images[1] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  </>
+                ) : item.images.length === 3 ? (
+                  // 3 images: 2 on top, 1 on bottom
+                  <>
+                    <TouchableOpacity 
+                      style={[styles.gridImageContainer, styles.gridImageTopLeft]}
+                      onPress={() => openImageModal(item.images[0])}
+                    >
+                      <Image
+                        source={{ uri: item.images[0] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.gridImageContainer, styles.gridImageTopRight]}
+                      onPress={() => openImageModal(item.images[1])}
+                    >
+                      <Image
+                        source={{ uri: item.images[1] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.gridImageContainer, styles.gridImageBottom]}
+                      onPress={() => openImageModal(item.images[2])}
+                    >
+                      <Image
+                        source={{ uri: item.images[2] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  // 4+ images: 2x2 grid
+                  <>
+                    <TouchableOpacity 
+                      style={[styles.gridImageContainer, styles.gridImageTopLeft]}
+                      onPress={() => openImageModal(item.images[0])}
+                    >
+                      <Image
+                        source={{ uri: item.images[0] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.gridImageContainer, styles.gridImageTopRight]}
+                      onPress={() => openImageModal(item.images[1])}
+                    >
+                      <Image
+                        source={{ uri: item.images[1] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.gridImageContainer, styles.gridImageBottomLeft]}
+                      onPress={() => openImageModal(item.images[2])}
+                    >
+                      <Image
+                        source={{ uri: item.images[2] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.gridImageContainer, styles.gridImageBottomRight]}
+                      onPress={() => openImageModal(item.images[3])}
+                    >
+                      <Image
+                        source={{ uri: item.images[3] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                      {item.images.length > 4 && (
+                        <View style={[styles.moreImagesOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}>
+                          <Text style={[styles.moreImagesText, { color: colors.card }]}>
+                            +{item.images.length - 4}
+                          </Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             )}
           </View>
@@ -533,14 +623,56 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   imagesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 2,
+    position: 'relative',
+    height: 200,
+    width: '100%',
   },
   gridImageContainer: {
+    position: 'absolute',
+    paddingHorizontal: 1,
+    paddingVertical: 1,
+  },
+  gridImageLeft: {
+    left: 0,
+    top: 0,
     width: '50%',
-    aspectRatio: 1,
-    position: 'relative',
+    height: '100%',
+  },
+  gridImageRight: {
+    right: 0,
+    top: 0,
+    width: '50%',
+    height: '100%',
+  },
+  gridImageTopLeft: {
+    left: 0,
+    top: 0,
+    width: '50%',
+    height: '50%',
+  },
+  gridImageTopRight: {
+    right: 0,
+    top: 0,
+    width: '50%',
+    height: '50%',
+  },
+  gridImageBottom: {
+    left: 0,
+    bottom: 0,
+    width: '100%',
+    height: '50%',
+  },
+  gridImageBottomLeft: {
+    left: 0,
+    bottom: 0,
+    width: '50%',
+    height: '50%',
+  },
+  gridImageBottomRight: {
+    right: 0,
+    bottom: 0,
+    width: '50%',
+    height: '50%',
   },
   gridImage: {
     width: '100%',
@@ -563,6 +695,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Bold',
     color: 'white',
+  },
+  postHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   postActions: {
     flexDirection: 'row',

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Search, Filter, MapPin, Calendar, Heart, MessageCircle } from 'lucide-react-native';
 import { router } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
 interface SearchResult {
   id: string;
@@ -238,22 +239,89 @@ export default function SearchScreen() {
               />
             ) : (
               <View style={styles.imagesGrid}>
-                {item.images.slice(0, 4).map((imageUri, index) => (
-                  <View key={index} style={styles.gridImageContainer}>
-                    <Image
-                      source={{ uri: imageUri }}
-                      style={[styles.gridImage, { borderColor: colors.border }]}
-                      resizeMode="cover"
-                    />
-                    {index === 3 && item.images.length > 4 && (
-                      <View style={[styles.moreImagesOverlay, { backgroundColor: colors.overlay }]}>
-                        <Text style={[styles.moreImagesText, { color: colors.card }]}>
-                          +{item.images.length - 4}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                ))}
+                {item.images.length === 2 ? (
+                  // 2 images: side by side
+                  <>
+                    <View style={[styles.gridImageContainer, styles.gridImageLeft]}>
+                      <Image
+                        source={{ uri: item.images[0] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    <View style={[styles.gridImageContainer, styles.gridImageRight]}>
+                      <Image
+                        source={{ uri: item.images[1] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  </>
+                ) : item.images.length === 3 ? (
+                  // 3 images: 2 on top, 1 on bottom
+                  <>
+                    <View style={[styles.gridImageContainer, styles.gridImageTopLeft]}>
+                      <Image
+                        source={{ uri: item.images[0] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    <View style={[styles.gridImageContainer, styles.gridImageTopRight]}>
+                      <Image
+                        source={{ uri: item.images[1] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    <View style={[styles.gridImageContainer, styles.gridImageBottom]}>
+                      <Image
+                        source={{ uri: item.images[2] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  </>
+                ) : (
+                  // 4+ images: 2x2 grid
+                  <>
+                    <View style={[styles.gridImageContainer, styles.gridImageTopLeft]}>
+                      <Image
+                        source={{ uri: item.images[0] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    <View style={[styles.gridImageContainer, styles.gridImageTopRight]}>
+                      <Image
+                        source={{ uri: item.images[1] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    <View style={[styles.gridImageContainer, styles.gridImageBottomLeft]}>
+                      <Image
+                        source={{ uri: item.images[2] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    <View style={[styles.gridImageContainer, styles.gridImageBottomRight]}>
+                      <Image
+                        source={{ uri: item.images[3] }}
+                        style={[styles.gridImage, { borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                      {item.images.length > 4 && (
+                        <View style={[styles.moreImagesOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}>
+                          <Text style={[styles.moreImagesText, { color: colors.card }]}>
+                            +{item.images.length - 4}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </>
+                )}
               </View>
             )}
           </View>
@@ -515,14 +583,56 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   imagesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 2,
+    position: 'relative',
+    height: 200,
+    width: '100%',
   },
   gridImageContainer: {
+    position: 'absolute',
+    paddingHorizontal: 1,
+    paddingVertical: 1,
+  },
+  gridImageLeft: {
+    left: 0,
+    top: 0,
     width: '50%',
-    aspectRatio: 1,
-    position: 'relative',
+    height: '100%',
+  },
+  gridImageRight: {
+    right: 0,
+    top: 0,
+    width: '50%',
+    height: '100%',
+  },
+  gridImageTopLeft: {
+    left: 0,
+    top: 0,
+    width: '50%',
+    height: '50%',
+  },
+  gridImageTopRight: {
+    right: 0,
+    top: 0,
+    width: '50%',
+    height: '50%',
+  },
+  gridImageBottom: {
+    left: 0,
+    bottom: 0,
+    width: '100%',
+    height: '50%',
+  },
+  gridImageBottomLeft: {
+    left: 0,
+    bottom: 0,
+    width: '50%',
+    height: '50%',
+  },
+  gridImageBottomRight: {
+    right: 0,
+    bottom: 0,
+    width: '50%',
+    height: '50%',
   },
   gridImage: {
     width: '100%',
