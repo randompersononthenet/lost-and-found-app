@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Image, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Heart, MessageCircle, Share, MapPin, Calendar, X } from 'lucide-react-native';
+import { Heart, MessageCircle, Share, MapPin, Calendar, X, Edit, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
 interface Post {
   id: string;
@@ -23,6 +24,7 @@ interface Post {
   likes: { count: number }[];
   comments: { count: number }[];
   user_liked: boolean;
+  user_id: string; // Added user_id to the Post interface
 }
 
 export default function FeedScreen() {
@@ -152,6 +154,55 @@ export default function FeedScreen() {
     setSelectedImage(null);
   };
 
+  const handleEditPost = (post: Post) => {
+    // Navigate to edit screen with post data
+    router.push({
+      pathname: '/edit',
+      params: { postId: post.id }
+    });
+  };
+
+  const handleDeletePost = async (post: Post) => {
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to delete this post? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('posts')
+                .delete()
+                .eq('id', post.id)
+                .eq('user_id', user!.id);
+
+              if (error) throw error;
+
+              Toast.show({
+                type: 'success',
+                text1: 'Post Deleted',
+                text2: 'Your post has been successfully deleted.',
+              });
+
+              // Refresh the feed
+              loadPosts();
+            } catch (error) {
+              console.error('Error deleting post:', error);
+              Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to delete post. Please try again.',
+              });
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderPost = ({ item }: { item: Post }) => (
     <View style={[styles.postCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {/* Post Header */}
@@ -169,13 +220,33 @@ export default function FeedScreen() {
             {formatDate(item.created_at)}
           </Text>
         </View>
-        <View style={[
-          styles.categoryBadge,
-          { backgroundColor: item.category === 'lost' ? colors.error : colors.success }
-        ]}>
-          <Text style={[styles.categoryText, { color: colors.card }]}>
-            {item.category.toUpperCase()}
-          </Text>
+        <View style={styles.headerActions}>
+          <View style={[
+            styles.categoryBadge,
+            { backgroundColor: item.category === 'lost' ? colors.error : colors.success }
+          ]}>
+            <Text style={[styles.categoryText, { color: colors.card }]}>
+              {item.category.toUpperCase()}
+            </Text>
+          </View>
+          
+          {/* Edit/Delete buttons for post owner */}
+          {user && item.user_id === user.id && (
+            <View style={styles.postActions}>
+              <TouchableOpacity
+                style={styles.actionIcon}
+                onPress={() => handleEditPost(item)}
+              >
+                <Edit size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionIcon}
+                onPress={() => handleDeletePost(item)}
+              >
+                <Trash2 size={16} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
 
@@ -390,6 +461,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-Regular',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   categoryBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -398,6 +474,14 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 12,
     fontFamily: 'Inter-Medium',
+  },
+  postActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionIcon: {
+    padding: 4,
   },
   postContent: {
     paddingHorizontal: 16,
