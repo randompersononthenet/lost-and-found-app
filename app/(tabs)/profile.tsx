@@ -1,23 +1,70 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Settings, CreditCard as Edit3, Moon, Sun, LogOut, User } from 'lucide-react-native';
+import { Settings, CreditCard as Edit3, Moon, Sun, LogOut, User, ChevronDown, Calendar } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 
 export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { profile, signOut, updateProfile } = useAuth();
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [genderPickerVisible, setGenderPickerVisible] = useState(false);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [editForm, setEditForm] = useState({
-    full_name: profile?.full_name || '',
-    birthday: profile?.birthday || '',
-    gender: profile?.gender || '',
-    year_level: profile?.year_level || '',
-    section: profile?.section || '',
-    course: profile?.course || '',
+    full_name: '',
+    birthday: '',
+    gender: '',
+    year_level: '',
+    section: '',
+    course: '',
   });
+
+  // Gender options that match the database constraint
+  const genderOptions = [
+    { label: 'Male', value: 'male' },
+    { label: 'Female', value: 'female' },
+    { label: 'Other', value: 'other' },
+    { label: 'Prefer not to say', value: 'prefer_not_to_say' },
+  ];
+
+  // Helper function to format date for display
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  // Helper function to format date for database (YYYY-MM-DD)
+  const formatDateForDatabase = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Update form when profile changes
+  React.useEffect(() => {
+    if (profile) {
+      setEditForm({
+        full_name: profile.full_name || '',
+        birthday: profile.birthday || '',
+        gender: profile.gender || '',
+        year_level: profile.year_level || '',
+        section: profile.section || '',
+        course: profile.course || '',
+      });
+    }
+  }, [profile]);
 
   const handleSignOut = async () => {
     try {
@@ -32,8 +79,55 @@ export default function ProfileScreen() {
   };
 
   const handleUpdateProfile = async () => {
+    // Validate required fields
+    if (!editForm.full_name.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Full name is required',
+      });
+      return;
+    }
+
+    // Validate gender if provided
+    if (editForm.gender && !genderOptions.find(option => option.value === editForm.gender)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Error',
+        text2: 'Please select a valid gender option',
+      });
+      return;
+    }
+
+    // Validate birthday if provided
+    if (editForm.birthday) {
+      const birthdayDate = new Date(editForm.birthday);
+      const today = new Date();
+      
+      if (birthdayDate > today) {
+        Toast.show({
+          type: 'error',
+          text1: 'Validation Error',
+          text2: 'Birthday cannot be in the future',
+        });
+        return;
+      }
+    }
+
+    // Prepare update data - only include non-empty values
+    const updateData: any = {
+      full_name: editForm.full_name.trim(),
+    };
+
+    if (editForm.birthday) updateData.birthday = editForm.birthday;
+    if (editForm.gender) updateData.gender = editForm.gender;
+    if (editForm.year_level) updateData.year_level = editForm.year_level;
+    if (editForm.section) updateData.section = editForm.section;
+    if (editForm.course) updateData.course = editForm.course;
+
     try {
-      await updateProfile(editForm);
+      console.log('Updating profile with:', updateData);
+      await updateProfile(updateData);
       setEditModalVisible(false);
       Toast.show({
         type: 'success',
@@ -41,10 +135,11 @@ export default function ProfileScreen() {
         text2: 'Your profile has been successfully updated',
       });
     } catch (error) {
+      console.error('Profile update error:', error);
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to update profile',
+        text2: error instanceof Error ? error.message : 'Failed to update profile',
       });
     }
   };
@@ -79,14 +174,14 @@ export default function ProfileScreen() {
           <View style={styles.detailRow}>
             <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Birthday</Text>
             <Text style={[styles.detailValue, { color: colors.text }]}>
-              {profile?.birthday || 'Not set'}
+              {profile?.birthday ? formatDateForDisplay(profile.birthday) : 'Not set'}
             </Text>
           </View>
 
           <View style={styles.detailRow}>
             <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Gender</Text>
             <Text style={[styles.detailValue, { color: colors.text }]}>
-              {profile?.gender || 'Not set'}
+              {profile?.gender ? genderOptions.find(option => option.value === profile.gender)?.label || profile.gender : 'Not set'}
             </Text>
           </View>
 
@@ -167,24 +262,32 @@ export default function ProfileScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>Birthday</Text>
-              <TextInput
+              <TouchableOpacity
                 style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={editForm.birthday}
-                onChangeText={(text) => setEditForm(prev => ({ ...prev, birthday: text }))}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.textSecondary}
-              />
+                onPress={() => setDatePickerVisible(true)}
+              >
+                <View style={styles.pickerContainer}>
+                  <Text style={[styles.pickerText, { color: editForm.birthday ? colors.text : colors.textSecondary }]}>
+                    {editForm.birthday ? formatDateForDisplay(editForm.birthday) : 'Select birthday'}
+                  </Text>
+                  <Calendar size={20} color={colors.textSecondary} />
+                </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>Gender</Text>
-              <TextInput
+              <TouchableOpacity
                 style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={editForm.gender}
-                onChangeText={(text) => setEditForm(prev => ({ ...prev, gender: text }))}
-                placeholder="Gender"
-                placeholderTextColor={colors.textSecondary}
-              />
+                onPress={() => setGenderPickerVisible(true)}
+              >
+                <View style={styles.pickerContainer}>
+                  <Text style={[styles.pickerText, { color: editForm.gender ? colors.text : colors.textSecondary }]}>
+                    {editForm.gender ? genderOptions.find(option => option.value === editForm.gender)?.label || editForm.gender : 'Select gender'}
+                  </Text>
+                  <ChevronDown size={20} color={colors.textSecondary} />
+                </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
@@ -220,6 +323,172 @@ export default function ProfileScreen() {
               />
             </View>
           </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Gender Picker Modal */}
+      <Modal visible={genderPickerVisible} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => setGenderPickerVisible(false)}>
+              <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Gender</Text>
+            <View style={{ width: 60 }} />
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {genderOptions.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.genderOption,
+                  { borderBottomColor: colors.border },
+                  editForm.gender === option.value && { backgroundColor: colors.primary + '20' }
+                ]}
+                onPress={() => {
+                  setEditForm(prev => ({ ...prev, gender: option.value }));
+                  setGenderPickerVisible(false);
+                }}
+              >
+                <Text style={[
+                  styles.genderOptionText,
+                  { color: colors.text },
+                  editForm.gender === option.value && { color: colors.primary, fontFamily: 'Inter-SemiBold' }
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Date Picker Modal */}
+      <Modal visible={datePickerVisible} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => setDatePickerVisible(false)}>
+              <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Birthday</Text>
+            <TouchableOpacity onPress={() => {
+              const today = new Date();
+              const selectedDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()); // Default to 18 years ago
+              setEditForm(prev => ({ ...prev, birthday: formatDateForDatabase(selectedDate) }));
+              setDatePickerVisible(false);
+            }}>
+              <Text style={[styles.modalSave, { color: colors.primary }]}>Set Default</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.datePickerContent}>
+            <Text style={[styles.datePickerLabel, { color: colors.textSecondary }]}>
+              Select your birthday
+            </Text>
+            
+            {/* Simple date picker with year, month, day selection */}
+            <View style={styles.datePickerRow}>
+              <View style={styles.datePickerColumn}>
+                <Text style={[styles.datePickerColumnLabel, { color: colors.text }]}>Year</Text>
+                <ScrollView style={styles.datePickerScroll} showsVerticalScrollIndicator={false}>
+                  {Array.from({ length: 50 }, (_, i) => new Date().getFullYear() - 50 + i).reverse().map((year) => (
+                    <TouchableOpacity
+                      key={year}
+                      style={[
+                        styles.datePickerOption,
+                        { borderBottomColor: colors.border },
+                        editForm.birthday && new Date(editForm.birthday).getFullYear() === year && { backgroundColor: colors.primary + '20' }
+                      ]}
+                      onPress={() => {
+                        const currentDate = editForm.birthday ? new Date(editForm.birthday) : new Date();
+                        const newDate = new Date(year, currentDate.getMonth(), currentDate.getDate());
+                        setEditForm(prev => ({ ...prev, birthday: formatDateForDatabase(newDate) }));
+                      }}
+                    >
+                      <Text style={[
+                        styles.datePickerOptionText,
+                        { color: colors.text },
+                        editForm.birthday && new Date(editForm.birthday).getFullYear() === year && { color: colors.primary, fontFamily: 'Inter-SemiBold' }
+                      ]}>
+                        {year}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.datePickerColumn}>
+                <Text style={[styles.datePickerColumnLabel, { color: colors.text }]}>Month</Text>
+                <ScrollView style={styles.datePickerScroll} showsVerticalScrollIndicator={false}>
+                  {[
+                    'January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'
+                  ].map((month, index) => (
+                    <TouchableOpacity
+                      key={month}
+                      style={[
+                        styles.datePickerOption,
+                        { borderBottomColor: colors.border },
+                        editForm.birthday && new Date(editForm.birthday).getMonth() === index && { backgroundColor: colors.primary + '20' }
+                      ]}
+                      onPress={() => {
+                        const currentDate = editForm.birthday ? new Date(editForm.birthday) : new Date();
+                        const newDate = new Date(currentDate.getFullYear(), index, currentDate.getDate());
+                        setEditForm(prev => ({ ...prev, birthday: formatDateForDatabase(newDate) }));
+                      }}
+                    >
+                      <Text style={[
+                        styles.datePickerOptionText,
+                        { color: colors.text },
+                        editForm.birthday && new Date(editForm.birthday).getMonth() === index && { color: colors.primary, fontFamily: 'Inter-SemiBold' }
+                      ]}>
+                        {month}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.datePickerColumn}>
+                <Text style={[styles.datePickerColumnLabel, { color: colors.text }]}>Day</Text>
+                <ScrollView style={styles.datePickerScroll} showsVerticalScrollIndicator={false}>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                    <TouchableOpacity
+                      key={day}
+                      style={[
+                        styles.datePickerOption,
+                        { borderBottomColor: colors.border },
+                        editForm.birthday && new Date(editForm.birthday).getDate() === day && { backgroundColor: colors.primary + '20' }
+                      ]}
+                      onPress={() => {
+                        const currentDate = editForm.birthday ? new Date(editForm.birthday) : new Date();
+                        const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                        setEditForm(prev => ({ ...prev, birthday: formatDateForDatabase(newDate) }));
+                      }}
+                    >
+                      <Text style={[
+                        styles.datePickerOptionText,
+                        { color: colors.text },
+                        editForm.birthday && new Date(editForm.birthday).getDate() === day && { color: colors.primary, fontFamily: 'Inter-SemiBold' }
+                      ]}>
+                        {day}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            {editForm.birthday && (
+              <View style={[styles.selectedDateContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.selectedDateLabel, { color: colors.textSecondary }]}>Selected:</Text>
+                <Text style={[styles.selectedDateText, { color: colors.text }]}>
+                  {formatDateForDisplay(editForm.birthday)}
+                </Text>
+              </View>
+            )}
+          </View>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -351,5 +620,76 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pickerText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+  },
+  genderOption: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+  },
+  genderOptionText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+  },
+  datePickerContent: {
+    flex: 1,
+    padding: 20,
+  },
+  datePickerLabel: {
+    fontSize: 16,
+    fontFamily: 'Inter-Medium',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  datePickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  datePickerColumn: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  datePickerColumnLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  datePickerScroll: {
+    maxHeight: 200,
+  },
+  datePickerOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    alignItems: 'center',
+  },
+  datePickerOptionText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+  },
+  selectedDateContainer: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  selectedDateLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    marginBottom: 4,
+  },
+  selectedDateText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
   },
 });

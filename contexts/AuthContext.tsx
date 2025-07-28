@@ -176,14 +176,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) throw new Error('No user logged in');
 
+    console.log('Updating profile for user:', user.id, 'with updates:', updates);
+
     const { error } = await supabase
       .from('profiles')
       .update(updates)
       .eq('id', user.id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase update error:', error);
+      throw error;
+    }
 
-    setProfile(prev => prev ? { ...prev, ...updates } : null);
+    // Reload the profile from database to ensure we have the latest data
+    await loadProfile(user.id);
   };
 
   return (
