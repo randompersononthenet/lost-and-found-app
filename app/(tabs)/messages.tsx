@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -25,6 +25,17 @@ export default function MessagesScreen() {
   const [searching, setSearching] = useState(false);
   const [userProfileModalVisible, setUserProfileModalVisible] = useState(false);
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
+  const [showSearch, setShowSearch] = useState(false); // NEW
+  const searchInputRef = useRef<TextInput>(null); // NEW
+
+  useEffect(() => {
+    if (showSearch) {
+      // Focus the search input when search is shown
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showSearch]);
 
   const searchUsers = async (query: string) => {
     if (!query.trim() || !user) return;
@@ -201,18 +212,23 @@ export default function MessagesScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
         <TouchableOpacity
           style={styles.newChatButton}
-          onPress={() => setSearchQuery('')}
+          onPress={() => {
+            setShowSearch(true);
+            setSearchQuery('');
+            setSearchResults([]);
+          }}
         >
           <Plus size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
       {/* Search Section */}
-      {searchQuery !== '' && (
+      {showSearch && (
         <View style={styles.searchSection}>
-          <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
             <Search size={20} color={colors.textSecondary} />
             <TextInput
+              ref={searchInputRef}
               style={[styles.searchInput, { color: colors.text }]}
               placeholder="Search users to start a conversation..."
               placeholderTextColor={colors.textSecondary}
@@ -225,34 +241,17 @@ export default function MessagesScreen() {
                   setSearchResults([]);
                 }
               }}
+              autoFocus={true}
+              returnKeyType="search"
             />
+            <TouchableOpacity onPress={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]); }}>
+              <Text style={{ color: colors.primary, marginLeft: 8, fontFamily: 'Inter-SemiBold' }}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* Content */}
-      {searchQuery === '' ? (
-        // Conversations List
-        <FlatList
-          data={conversations}
-          renderItem={renderConversation}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.conversationsList}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <MessageCircle size={48} color={colors.textSecondary} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                No Conversations Yet
-              </Text>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                Start a conversation by tapping the + button above
-              </Text>
-            </View>
-          }
-        />
-      ) : (
-        // Search Results
+      {showSearch ? (
         <FlatList
           data={searchResults}
           renderItem={renderSearchResult}
@@ -262,20 +261,29 @@ export default function MessagesScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               {searching ? (
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                  Searching...
-                </Text>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Searching...</Text>
               ) : (
                 <>
                   <Search size={48} color={colors.textSecondary} />
-                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                    No Users Found
-                  </Text>
-                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                    Try searching with a different name
-                  </Text>
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>No Users Found</Text>
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Try searching with a different name</Text>
                 </>
               )}
+            </View>
+          }
+        />
+      ) : (
+        <FlatList
+          data={conversations}
+          renderItem={renderConversation}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.conversationsList}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <MessageCircle size={48} color={colors.textSecondary} />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No Conversations Yet</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Start a conversation by tapping the + button above</Text>
             </View>
           }
         />
