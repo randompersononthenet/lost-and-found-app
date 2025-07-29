@@ -9,7 +9,7 @@ import Toast from 'react-native-toast-message';
 
 export default function AuthScreen() {
   const { colors } = useTheme();
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, forgotPassword, user } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +17,11 @@ export default function AuthScreen() {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState('');
+  const [forgotError, setForgotError] = useState('');
 
   // Redirect if already logged in
   React.useEffect(() => {
@@ -76,6 +81,20 @@ export default function AuthScreen() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setForgotLoading(true);
+    setForgotSuccess('');
+    setForgotError('');
+    try {
+      await forgotPassword(forgotEmail);
+      setForgotSuccess('Password reset email sent! Please check your inbox.');
+    } catch (error: any) {
+      setForgotError(error.message || 'Failed to send reset email.');
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -183,6 +202,21 @@ export default function AuthScreen() {
               </View>
             )}
 
+            {/* Forgot Password Link (Login only) */}
+            {isLogin && (
+              <TouchableOpacity
+                style={{ alignSelf: 'flex-end', marginBottom: 12 }}
+                onPress={() => {
+                  setForgotModalVisible(true);
+                  setForgotEmail(email);
+                  setForgotSuccess('');
+                  setForgotError('');
+                }}
+              >
+                <Text style={{ color: colors.primary, fontFamily: 'Inter-SemiBold' }}>Forgot Password?</Text>
+              </TouchableOpacity>
+            )}
+
             {/* Submit Button */}
             <TouchableOpacity
               style={[styles.submitButton, { backgroundColor: colors.primary }]}
@@ -207,6 +241,49 @@ export default function AuthScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Forgot Password Modal */}
+          {forgotModalVisible && (
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Reset Password</Text>
+                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Enter your educational email to receive a password reset link.</Text>
+                <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: 16 }]}> 
+                  <Text style={[styles.emailPrefix, { color: colors.textSecondary }]}>@</Text>
+                  <TextInput
+                    style={[styles.textInput, { color: colors.text }]}
+                    placeholder="student@university.edu"
+                    placeholderTextColor={colors.textSecondary}
+                    value={forgotEmail}
+                    onChangeText={setForgotEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+                {forgotError ? (
+                  <Text style={{ color: colors.error, marginTop: 8 }}>{forgotError}</Text>
+                ) : null}
+                {forgotSuccess ? (
+                  <Text style={{ color: colors.success, marginTop: 8 }}>{forgotSuccess}</Text>
+                ) : null}
+                <TouchableOpacity
+                  style={[styles.submitButton, { backgroundColor: colors.primary, marginTop: 16 }]} 
+                  onPress={handleForgotPassword}
+                  disabled={forgotLoading}
+                >
+                  <Text style={[styles.submitButtonText, { color: colors.card }]}> 
+                    {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ alignSelf: 'center', marginTop: 12 }}
+                  onPress={() => setForgotModalVisible(false)}
+                >
+                  <Text style={{ color: colors.primary, fontFamily: 'Inter-SemiBold' }}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -315,5 +392,34 @@ const styles = StyleSheet.create({
   switchText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    width: '80%',
+    padding: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
+    marginBottom: 20,
   },
 });
