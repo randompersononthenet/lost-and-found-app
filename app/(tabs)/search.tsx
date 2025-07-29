@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Search, Filter, MapPin, Calendar, Heart, MessageCircle } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import UserProfileModal from '@/components/UserProfileModal';
 
 interface SearchResult {
   id: string;
@@ -34,6 +35,9 @@ export default function SearchScreen() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [userProfileModalVisible, setUserProfileModalVisible] = useState(false);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
+  const [loadingUserProfile, setLoadingUserProfile] = useState(false);
 
   const categories = [
     { key: 'all', label: 'All Items' },
@@ -122,6 +126,51 @@ export default function SearchScreen() {
     });
   };
 
+  const handleOpenUserProfile = async (userId: string) => {
+    if (userId === user?.id) {
+      // If it's the current user, navigate to their profile
+      router.push('/(tabs)/profile');
+      return;
+    }
+
+    setLoadingUserProfile(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      setSelectedUserProfile(data);
+      setUserProfileModalVisible(true);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load user profile',
+      });
+    } finally {
+      setLoadingUserProfile(false);
+    }
+  };
+
+  const handleCloseUserProfile = () => {
+    setUserProfileModalVisible(false);
+    setSelectedUserProfile(null);
+  };
+
+  const handleMessageUser = (userProfile: any) => {
+    // TODO: Implement messaging functionality
+    Toast.show({
+      type: 'info',
+      text1: 'Coming Soon',
+      text2: 'Messaging feature will be available soon!',
+    });
+  };
+
   const toggleLike = async (postId: string, currentlyLiked: boolean) => {
     if (!user) return;
 
@@ -174,19 +223,24 @@ export default function SearchScreen() {
     >
       {/* Post Header */}
       <View style={styles.resultHeader}>
-        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <Text style={[styles.avatarText, { color: colors.card }]}>
-            {item.profiles.full_name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-        <View style={styles.userInfo}>
-          <Text style={[styles.userName, { color: colors.text }]}>
-            {item.profiles.full_name}
-          </Text>
-          <Text style={[styles.postDate, { color: colors.textSecondary }]}>
-            {formatDate(item.created_at)}
-          </Text>
-        </View>
+        <TouchableOpacity 
+          style={styles.userInfoContainer}
+          onPress={() => handleOpenUserProfile(item.user_id)}
+        >
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.avatarText, { color: colors.card }]}>
+              {item.profiles.full_name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={[styles.userName, { color: colors.text }]}>
+              {item.profiles.full_name}
+            </Text>
+            <Text style={[styles.postDate, { color: colors.textSecondary }]}>
+              {formatDate(item.created_at)}
+            </Text>
+          </View>
+        </TouchableOpacity>
         <View style={[
           styles.categoryBadge,
           { backgroundColor: item.category === 'lost' ? colors.error : colors.success }
@@ -445,6 +499,14 @@ export default function SearchScreen() {
           </View>
         }
       />
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        visible={userProfileModalVisible}
+        onClose={handleCloseUserProfile}
+        userProfile={selectedUserProfile}
+        onMessagePress={() => selectedUserProfile && handleMessageUser(selectedUserProfile)}
+      />
     </SafeAreaView>
   );
 }
@@ -509,6 +571,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     paddingBottom: 12,
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   avatar: {
     width: 40,
