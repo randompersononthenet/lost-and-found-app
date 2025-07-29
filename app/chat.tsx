@@ -33,8 +33,74 @@ export default function ChatScreen() {
     if (conversationId) {
       loadMessages(conversationId);
       markConversationAsRead(conversationId);
+      
+      // Load conversation data for the header
+      const loadConversationData = async () => {
+        try {
+          console.log('Loading conversation data for ID:', conversationId);
+          
+          // Find the conversation in the conversations list
+          const { data: conversations } = await supabase
+            .from('conversation_participants')
+            .select('conversation_id')
+            .eq('user_id', user?.id);
+          
+          console.log('User conversations:', conversations);
+          
+          if (conversations && conversations.length > 0) {
+            const conversationIds = conversations.map(c => c.conversation_id);
+            const { data: conversationData } = await supabase
+              .from('conversations')
+              .select('*')
+              .eq('id', conversationId)
+              .single();
+            
+            console.log('Conversation data:', conversationData);
+            
+            if (conversationData) {
+              // Get participants for this conversation
+              const { data: participants } = await supabase
+                .from('conversation_participants')
+                .select('user_id')
+                .eq('conversation_id', conversationId)
+                .neq('user_id', user?.id);
+              
+              console.log('Participants:', participants);
+              
+              const participantProfiles = await Promise.all(
+                (participants || []).map(async (participant) => {
+                  const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('full_name, avatar_url')
+                    .eq('id', participant.user_id)
+                    .single();
+                  return {
+                    user_id: participant.user_id,
+                    full_name: profile?.full_name || 'Unknown User',
+                    avatar_url: profile?.avatar_url,
+                  };
+                })
+              );
+              
+              console.log('Participant profiles:', participantProfiles);
+              
+              const conversationWithParticipants = {
+                ...conversationData,
+                participants: participantProfiles,
+              };
+              
+              console.log('Setting current conversation:', conversationWithParticipants);
+              setCurrentConversation(conversationWithParticipants);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading conversation data:', error);
+        }
+      };
+      
+      loadConversationData();
     }
-  }, [conversationId, loadMessages, markConversationAsRead]);
+  }, [conversationId, loadMessages, markConversationAsRead, user?.id, setCurrentConversation]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !conversationId) return;
@@ -103,7 +169,12 @@ export default function ChatScreen() {
   const isOwnMessage = (message: any) => message.sender_id === user?.id;
 
   const getOtherParticipants = () => {
-    if (!currentConversation) return [];
+    if (!currentConversation) {
+      console.log('No current conversation loaded');
+      return [];
+    }
+    console.log('Current conversation:', currentConversation);
+    console.log('Participants:', currentConversation.participants);
     return currentConversation.participants.filter(
       (p: any) => p.user_id !== user?.id
     );
@@ -150,7 +221,36 @@ export default function ChatScreen() {
   const renderChatHeader = () => {
     const otherParticipants = getOtherParticipants();
     
-    if (otherParticipants.length === 0) return null;
+    if (otherParticipants.length === 0) {
+      // Show loading state or fallback
+      return (
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color={colors.text} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerContent}>
+            <View style={[styles.headerAvatar, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.headerAvatarText, { color: colors.card }]}>
+                ?
+              </Text>
+            </View>
+            <View style={styles.headerInfo}>
+              <Text style={[styles.headerName, { color: colors.text }]}>
+                Loading...
+              </Text>
+              <Text style={[styles.headerStatus, { color: colors.textSecondary }]}>
+                Direct message
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.moreButton}>
+            <MoreVertical size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
     const participant = otherParticipants[0]; // For now, show first participant
 
@@ -166,12 +266,12 @@ export default function ChatScreen() {
         >
           <View style={[styles.headerAvatar, { backgroundColor: colors.primary }]}>
             <Text style={[styles.headerAvatarText, { color: colors.card }]}>
-              {participant.full_name.charAt(0).toUpperCase()}
+              {participant.full_name?.charAt(0).toUpperCase() || 'U'}
             </Text>
           </View>
           <View style={styles.headerInfo}>
             <Text style={[styles.headerName, { color: colors.text }]}>
-              {participant.full_name}
+              {participant.full_name || 'Unknown User'}
             </Text>
             <Text style={[styles.headerStatus, { color: colors.textSecondary }]}>
               {otherParticipants.length === 1 ? 'Direct message' : `${otherParticipants.length} participants`}
