@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Settings, CreditCard as Edit3, Moon, Sun, LogOut, User, ChevronDown, Calendar } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
+import { router } from 'expo-router';
 
 export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -212,7 +213,16 @@ export default function ProfileScreen() {
         {/* Settings */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Settings</Text>
-          
+
+          {/* My Posts Button */}
+          <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/my-posts')}>
+            <View style={styles.settingLeft}>
+              <Edit3 size={20} color={colors.primary} />
+              <Text style={[styles.settingText, { color: colors.primary }]}>My Posts</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Theme toggle and sign out ... */}
           <TouchableOpacity style={styles.settingRow} onPress={toggleTheme}>
             <View style={styles.settingLeft}>
               {isDark ? (
@@ -220,18 +230,13 @@ export default function ProfileScreen() {
               ) : (
                 <Sun size={20} color={colors.text} />
               )}
-              <Text style={[styles.settingText, { color: colors.text }]}>
-                {isDark ? 'Dark Mode' : 'Light Mode'}
-              </Text>
+              <Text style={[styles.settingText, { color: colors.text }]}> {isDark ? 'Dark Mode' : 'Light Mode'} </Text>
             </View>
           </TouchableOpacity>
-
           <TouchableOpacity style={styles.settingRow} onPress={() => setSignOutConfirmVisible(true)}>
             <View style={styles.settingLeft}>
               <LogOut size={20} color={colors.error} />
-              <Text style={[styles.settingText, { color: colors.error }]}>
-                Sign Out
-              </Text>
+              <Text style={[styles.settingText, { color: colors.error }]}>Sign Out</Text>
             </View>
           </TouchableOpacity>
         </View>
