@@ -20,6 +20,7 @@ export default function ProfileScreen() {
     section: '',
     course: '',
   });
+  const [signOutConfirmVisible, setSignOutConfirmVisible] = useState(false); // NEW
 
   // Gender options that match the database constraint
   const genderOptions = [
@@ -67,6 +68,7 @@ export default function ProfileScreen() {
   }, [profile]);
 
   const handleSignOut = async () => {
+    setSignOutConfirmVisible(false); // Hide modal
     try {
       await signOut();
     } catch (error) {
@@ -224,7 +226,7 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingRow} onPress={handleSignOut}>
+          <TouchableOpacity style={styles.settingRow} onPress={() => setSignOutConfirmVisible(true)}>
             <View style={styles.settingLeft}>
               <LogOut size={20} color={colors.error} />
               <Text style={[styles.settingText, { color: colors.error }]}>
@@ -263,7 +265,7 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>Birthday</Text>
               <TouchableOpacity
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => setDatePickerVisible(true)}
               >
                 <View style={styles.pickerContainer}>
@@ -278,7 +280,7 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>Gender</Text>
               <TouchableOpacity
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => setGenderPickerVisible(true)}
               >
                 <View style={styles.pickerContainer}>
@@ -490,6 +492,37 @@ export default function ProfileScreen() {
             )}
           </View>
         </SafeAreaView>
+      </Modal>
+
+      {/* Sign Out Confirmation Modal */}
+      <Modal
+        visible={signOutConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSignOutConfirmVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: colors.card, padding: 28, borderRadius: 16, width: '80%', alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter-SemiBold', color: colors.text, marginBottom: 12 }}>Sign Out</Text>
+            <Text style={{ fontSize: 15, color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}>
+              Are you sure you want to sign out?
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+              <TouchableOpacity
+                style={{ flex: 1, marginRight: 8, paddingVertical: 12, borderRadius: 8, backgroundColor: colors.border, alignItems: 'center' }}
+                onPress={() => setSignOutConfirmVisible(false)}
+              >
+                <Text style={{ color: colors.text, fontFamily: 'Inter-SemiBold' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, marginLeft: 8, paddingVertical: 12, borderRadius: 8, backgroundColor: colors.error, alignItems: 'center' }}
+                onPress={handleSignOut}
+              >
+                <Text style={{ color: colors.card, fontFamily: 'Inter-SemiBold' }}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
