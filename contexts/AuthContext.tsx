@@ -115,8 +115,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    if (!email.endsWith('.edu.ph')) {
-      throw new Error('Please use your educational email address');
+    if (!email.endsWith('.edu') && !email.endsWith('.edu.ph')) {
+      throw new Error('Please use your educational email address (.edu or .edu.ph)');
     }
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -128,8 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    if (!email.endsWith('.edu')) {
-      throw new Error('Please use your educational email address');
+    if (!email.endsWith('.edu') && !email.endsWith('.edu.ph')) {
+      throw new Error('Please use your educational email address (.edu or .edu.ph)');
     }
 
     const { data: authData, error: authError } = await supabase.auth.signUp({

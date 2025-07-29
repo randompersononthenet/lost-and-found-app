@@ -2,7 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMessaging } from '@/contexts/MessagingContext';
 import { User, MapPin, Calendar, BookOpen, GraduationCap, X, MessageCircle } from 'lucide-react-native';
+import { router } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
 interface UserProfile {
   id: string;
@@ -31,8 +35,34 @@ export default function UserProfileModal({
   onMessagePress 
 }: UserProfileModalProps) {
   const { colors } = useTheme();
+  const { user } = useAuth();
+  const { createConversation } = useMessaging();
 
   if (!userProfile) return null;
+
+  const handleMessageUser = async () => {
+    if (!user || userProfile.id === user.id) return;
+
+    try {
+      const conversationId = await createConversation([userProfile.id]);
+      
+      // Close the modal
+      onClose();
+      
+      // Navigate to the chat
+      router.push({
+        pathname: '/chat',
+        params: { conversationId }
+      });
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to start conversation',
+      });
+    }
+  };
 
   const formatDate = (dateString: string) => {
     try {
@@ -149,11 +179,11 @@ export default function UserProfileModal({
           )}
 
           {/* Action Buttons */}
-          {onMessagePress && (
+          {user && userProfile.id !== user.id && (
             <View style={[styles.actionsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <TouchableOpacity
                 style={[styles.messageButton, { backgroundColor: colors.primary }]}
-                onPress={onMessagePress}
+                onPress={handleMessageUser}
               >
                 <MessageCircle size={20} color={colors.card} />
                 <Text style={[styles.messageButtonText, { color: colors.card }]}>
