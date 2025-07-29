@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Image, Linking } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Image, Linking, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Camera, MapPin, Calendar } from 'lucide-react-native';
+import { Camera, MapPin, Calendar, ChevronDown } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
@@ -20,6 +20,30 @@ export default function CreatePostScreen() {
   const [dateLostFound, setDateLostFound] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+
+  // Helper function to format date for display
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  // Helper function to format date for database (YYYY-MM-DD)
+  const formatDateForDatabase = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const pickImages = async () => {
     // Check current permission status
@@ -320,16 +344,18 @@ export default function CreatePostScreen() {
         {/* Date */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Date</Text>
-          <View style={[styles.inputWithIcon, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.inputWithIcon, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => setDatePickerVisible(true)}
+          >
             <Calendar size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.textInputWithIcon, { color: colors.text }]}
-              placeholder="When was it lost/found? (YYYY-MM-DD)"
-              placeholderTextColor={colors.textSecondary}
-              value={dateLostFound}
-              onChangeText={setDateLostFound}
-            />
-          </View>
+            <View style={styles.pickerContainer}>
+              <Text style={[styles.pickerText, { color: dateLostFound ? colors.text : colors.textSecondary }]}>
+                {dateLostFound ? formatDateForDisplay(dateLostFound) : 'When was it lost/found?'}
+              </Text>
+              <ChevronDown size={20} color={colors.textSecondary} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Image */}
@@ -389,6 +415,133 @@ export default function CreatePostScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Date Picker Modal */}
+      <Modal visible={datePickerVisible} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => setDatePickerVisible(false)}>
+              <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Date</Text>
+            <TouchableOpacity onPress={() => {
+              const today = new Date();
+              setDateLostFound(formatDateForDatabase(today));
+              setDatePickerVisible(false);
+            }}>
+              <Text style={[styles.modalSave, { color: colors.primary }]}>Today</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.datePickerContent}>
+            <Text style={[styles.datePickerLabel, { color: colors.textSecondary }]}>
+              When was the item lost/found?
+            </Text>
+            
+            {/* Simple date picker with year, month, day selection */}
+            <View style={styles.datePickerRow}>
+              <View style={styles.datePickerColumn}>
+                <Text style={[styles.datePickerColumnLabel, { color: colors.text }]}>Year</Text>
+                <ScrollView style={styles.datePickerScroll} showsVerticalScrollIndicator={false}>
+                  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).reverse().map((year) => (
+                    <TouchableOpacity
+                      key={year}
+                      style={[
+                        styles.datePickerOption,
+                        { borderBottomColor: colors.border },
+                        dateLostFound && new Date(dateLostFound).getFullYear() === year && { backgroundColor: colors.primary + '20' }
+                      ]}
+                      onPress={() => {
+                        const currentDate = dateLostFound ? new Date(dateLostFound) : new Date();
+                        const newDate = new Date(year, currentDate.getMonth(), currentDate.getDate());
+                        setDateLostFound(formatDateForDatabase(newDate));
+                      }}
+                    >
+                      <Text style={[
+                        styles.datePickerOptionText,
+                        { color: colors.text },
+                        dateLostFound && new Date(dateLostFound).getFullYear() === year && { color: colors.primary, fontFamily: 'Inter-SemiBold' }
+                      ]}>
+                        {year}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.datePickerColumn}>
+                <Text style={[styles.datePickerColumnLabel, { color: colors.text }]}>Month</Text>
+                <ScrollView style={styles.datePickerScroll} showsVerticalScrollIndicator={false}>
+                  {[
+                    'January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'
+                  ].map((month, index) => (
+                    <TouchableOpacity
+                      key={month}
+                      style={[
+                        styles.datePickerOption,
+                        { borderBottomColor: colors.border },
+                        dateLostFound && new Date(dateLostFound).getMonth() === index && { backgroundColor: colors.primary + '20' }
+                      ]}
+                      onPress={() => {
+                        const currentDate = dateLostFound ? new Date(dateLostFound) : new Date();
+                        const newDate = new Date(currentDate.getFullYear(), index, currentDate.getDate());
+                        setDateLostFound(formatDateForDatabase(newDate));
+                      }}
+                    >
+                      <Text style={[
+                        styles.datePickerOptionText,
+                        { color: colors.text },
+                        dateLostFound && new Date(dateLostFound).getMonth() === index && { color: colors.primary, fontFamily: 'Inter-SemiBold' }
+                      ]}>
+                        {month}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.datePickerColumn}>
+                <Text style={[styles.datePickerColumnLabel, { color: colors.text }]}>Day</Text>
+                <ScrollView style={styles.datePickerScroll} showsVerticalScrollIndicator={false}>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                    <TouchableOpacity
+                      key={day}
+                      style={[
+                        styles.datePickerOption,
+                        { borderBottomColor: colors.border },
+                        dateLostFound && new Date(dateLostFound).getDate() === day && { backgroundColor: colors.primary + '20' }
+                      ]}
+                      onPress={() => {
+                        const currentDate = dateLostFound ? new Date(dateLostFound) : new Date();
+                        const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                        setDateLostFound(formatDateForDatabase(newDate));
+                      }}
+                    >
+                      <Text style={[
+                        styles.datePickerOptionText,
+                        { color: colors.text },
+                        dateLostFound && new Date(dateLostFound).getDate() === day && { color: colors.primary, fontFamily: 'Inter-SemiBold' }
+                      ]}>
+                        {day}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            {dateLostFound && (
+              <View style={[styles.selectedDateContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.selectedDateLabel, { color: colors.textSecondary }]}>Selected:</Text>
+                <Text style={[styles.selectedDateText, { color: colors.text }]}>
+                  {formatDateForDisplay(dateLostFound)}
+                </Text>
+              </View>
+            )}
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -549,5 +702,91 @@ const styles = StyleSheet.create({
   bottomSubmitButtonText: {
     fontSize: 18,
     fontFamily: 'Inter-Bold',
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
+  },
+  pickerText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+  },
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  modalCancel: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+  },
+  modalSave: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
+  datePickerContent: {
+    flex: 1,
+    padding: 20,
+  },
+  datePickerLabel: {
+    fontSize: 16,
+    fontFamily: 'Inter-Medium',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  datePickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  datePickerColumn: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  datePickerColumnLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  datePickerScroll: {
+    maxHeight: 200,
+  },
+  datePickerOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    alignItems: 'center',
+  },
+  datePickerOptionText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+  },
+  selectedDateContainer: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  selectedDateLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    marginBottom: 4,
+  },
+  selectedDateText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
   },
 });
