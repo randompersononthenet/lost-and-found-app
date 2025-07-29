@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Heart, MessageCircle, Share, MapPin, Calendar, X, Edit, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import UserProfileModal from '@/components/UserProfileModal';
 
 interface Post {
   id: string;
@@ -35,6 +36,9 @@ export default function FeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [userProfileModalVisible, setUserProfileModalVisible] = useState(false);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
+  const [loadingUserProfile, setLoadingUserProfile] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -210,23 +214,73 @@ export default function FeedScreen() {
     });
   };
 
+  const handleOpenUserProfile = async (userId: string) => {
+    if (userId === user?.id) {
+      // If it's the current user, navigate to their profile
+      router.push('/(tabs)/profile');
+      return;
+    }
+
+    setLoadingUserProfile(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      setSelectedUserProfile(data);
+      setUserProfileModalVisible(true);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load user profile',
+      });
+    } finally {
+      setLoadingUserProfile(false);
+    }
+  };
+
+  const handleCloseUserProfile = () => {
+    setUserProfileModalVisible(false);
+    setSelectedUserProfile(null);
+  };
+
+  const handleMessageUser = (userProfile: any) => {
+    // TODO: Implement messaging functionality
+    Toast.show({
+      type: 'info',
+      text1: 'Coming Soon',
+      text2: 'Messaging feature will be available soon!',
+    });
+  };
+
   const renderPost = ({ item }: { item: Post }) => (
     <View style={[styles.postCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {/* Post Header */}
       <View style={styles.postHeader}>
-        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <Text style={[styles.avatarText, { color: colors.card }]}>
-            {item.profiles.full_name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-        <View style={styles.userInfo}>
-          <Text style={[styles.userName, { color: colors.text }]}>
-            {item.profiles.full_name}
-          </Text>
-          <Text style={[styles.postDate, { color: colors.textSecondary }]}>
-            {formatDate(item.created_at)}
-          </Text>
-        </View>
+        <TouchableOpacity 
+          style={styles.userInfoContainer}
+          onPress={() => handleOpenUserProfile(item.user_id)}
+        >
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.avatarText, { color: colors.card }]}>
+              {item.profiles.full_name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={[styles.userName, { color: colors.text }]}>
+              {item.profiles.full_name}
+            </Text>
+            <Text style={[styles.postDate, { color: colors.textSecondary }]}>
+              {formatDate(item.created_at)}
+            </Text>
+          </View>
+        </TouchableOpacity>
         <View style={styles.headerActions}>
           <View style={[
             styles.categoryBadge,
@@ -504,6 +558,14 @@ export default function FeedScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        visible={userProfileModalVisible}
+        onClose={handleCloseUserProfile}
+        userProfile={selectedUserProfile}
+        onMessagePress={() => selectedUserProfile && handleMessageUser(selectedUserProfile)}
+      />
     </SafeAreaView>
   );
 }
@@ -537,13 +599,18 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 12,
   },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
   avatarText: {
     fontSize: 16,
