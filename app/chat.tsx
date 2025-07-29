@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessaging } from '@/contexts/MessagingContext';
-import { ArrowLeft, Send, Trash2, User } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
+import { ArrowLeft, Send, Trash2, User, MoreVertical } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import UserProfileModal from '@/components/UserProfileModal';
 
 export default function ChatScreen() {
   const { colors } = useTheme();
@@ -23,6 +25,8 @@ export default function ChatScreen() {
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [userProfileModalVisible, setUserProfileModalVisible] = useState(false);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -55,6 +59,39 @@ export default function ChatScreen() {
     }
   };
 
+  const handleOpenUserProfile = async (userId: string) => {
+    if (userId === user?.id) {
+      // If it's the current user, navigate to their profile
+      router.push('/(tabs)/profile');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      setSelectedUserProfile(data);
+      setUserProfileModalVisible(true);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load user profile',
+      });
+    }
+  };
+
+  const handleCloseUserProfile = () => {
+    setUserProfileModalVisible(false);
+    setSelectedUserProfile(null);
+  };
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString('en-US', {
@@ -64,6 +101,13 @@ export default function ChatScreen() {
   };
 
   const isOwnMessage = (message: any) => message.sender_id === user?.id;
+
+  const getOtherParticipants = () => {
+    if (!currentConversation) return [];
+    return currentConversation.participants.filter(
+      (p: any) => p.user_id !== user?.id
+    );
+  };
 
   const renderMessage = ({ item }: { item: any }) => (
     <View style={[
@@ -103,33 +147,48 @@ export default function ChatScreen() {
     </View>
   );
 
-  const renderConversationHeader = () => {
-    if (!currentConversation) return null;
+  const renderChatHeader = () => {
+    const otherParticipants = getOtherParticipants();
+    
+    if (otherParticipants.length === 0) return null;
 
-    const otherParticipants = currentConversation.participants.filter(
-      (p: any) => p.user_id !== user?.id
-    );
+    const participant = otherParticipants[0]; // For now, show first participant
 
     return (
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {otherParticipants.map((p: any) => p.full_name).join(', ')}
-          </Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {otherParticipants.length === 1 ? 'Direct message' : 'Group conversation'}
-          </Text>
-        </View>
+        
+        <TouchableOpacity 
+          style={styles.headerContent}
+          onPress={() => handleOpenUserProfile(participant.user_id)}
+        >
+          <View style={[styles.headerAvatar, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.headerAvatarText, { color: colors.card }]}>
+              {participant.full_name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.headerInfo}>
+            <Text style={[styles.headerName, { color: colors.text }]}>
+              {participant.full_name}
+            </Text>
+            <Text style={[styles.headerStatus, { color: colors.textSecondary }]}>
+              {otherParticipants.length === 1 ? 'Direct message' : `${otherParticipants.length} participants`}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.moreButton}>
+          <MoreVertical size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
     );
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {renderConversationHeader()}
+      {renderChatHeader()}
 
       <KeyboardAvoidingView 
         style={styles.content}
@@ -181,6 +240,14 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        visible={userProfileModalVisible}
+        onClose={handleCloseUserProfile}
+        userProfile={selectedUserProfile}
+        onMessagePress={() => selectedUserProfile && handleOpenUserProfile(selectedUserProfile.id)}
+      />
     </SafeAreaView>
   );
 }
@@ -202,15 +269,35 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerAvatarText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerName: {
+    fontSize: 16,
     fontFamily: 'Inter-SemiBold',
   },
-  headerSubtitle: {
-    fontSize: 14,
+  headerStatus: {
+    fontSize: 12,
     fontFamily: 'Inter-Regular',
     marginTop: 2,
+  },
+  moreButton: {
+    padding: 4,
   },
   content: {
     flex: 1,

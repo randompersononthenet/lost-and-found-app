@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessaging } from '@/contexts/MessagingContext';
 import { supabase } from '@/lib/supabase';
-import { MessageCircle, Plus, Search, User } from 'lucide-react-native';
+import { Search, Filter, MapPin, Calendar, Heart, MessageCircle, Plus, Search as SearchIcon } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import UserProfileModal from '@/components/UserProfileModal';
 
 interface UserSearchResult {
   id: string;
@@ -18,10 +19,12 @@ interface UserSearchResult {
 export default function MessagesScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const { conversations, loading, loadConversations } = useMessaging();
+  const { conversations, loading, loadConversations, createConversation } = useMessaging();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [userProfileModalVisible, setUserProfileModalVisible] = useState(false);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
 
   const searchUsers = async (query: string) => {
     if (!query.trim() || !user) return;
@@ -82,36 +85,73 @@ export default function MessagesScreen() {
     }
   };
 
-  const renderConversation = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[styles.conversationCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => {
-        router.push({
-          pathname: '/chat',
-          params: { conversationId: item.id }
-        });
-      }}
-    >
-      <View style={styles.conversationHeader}>
-        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <User size={20} color={colors.card} />
-        </View>
-        <View style={styles.conversationInfo}>
-          <View style={styles.conversationTop}>
-            <Text style={[styles.conversationName, { color: colors.text }]}>
-              {item.participants.map((p: any) => p.full_name).join(', ')}
-            </Text>
-            <Text style={[styles.conversationTime, { color: colors.textSecondary }]}>
-              {formatDate(item.last_message_at)}
-            </Text>
-          </View>
-          <View style={styles.conversationBottom}>
-            <Text 
-              style={[styles.lastMessage, { color: colors.textSecondary }]}
-              numberOfLines={1}
-            >
-              {item.last_message_content || 'No messages yet'}
-            </Text>
+  const handleOpenUserProfile = async (userId: string) => {
+    if (userId === user?.id) {
+      // If it's the current user, navigate to their profile
+      router.push('/(tabs)/profile');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      setSelectedUserProfile(data);
+      setUserProfileModalVisible(true);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load user profile',
+      });
+    }
+  };
+
+  const handleCloseUserProfile = () => {
+    setUserProfileModalVisible(false);
+    setSelectedUserProfile(null);
+  };
+
+  const renderConversation = ({ item }: { item: any }) => {
+    const otherParticipants = item.participants.filter((p: any) => p.user_id !== user?.id);
+    const participant = otherParticipants[0]; // Show first participant for now
+
+    return (
+      <TouchableOpacity
+        style={[styles.conversationCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        onPress={() => {
+          router.push({
+            pathname: '/chat',
+            params: { conversationId: item.id }
+          });
+        }}
+      >
+        <View style={styles.conversationHeader}>
+          <TouchableOpacity 
+            style={styles.userInfoContainer}
+            onPress={() => handleOpenUserProfile(participant?.user_id)}
+          >
+            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.avatarText, { color: colors.card }]}>
+                {participant?.full_name?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={[styles.conversationName, { color: colors.text }]}>
+                {otherParticipants.map((p: any) => p.full_name).join(', ')}
+              </Text>
+              <Text style={[styles.postDate, { color: colors.textSecondary }]}>
+                {formatDate(item.last_message_at)}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <View style={styles.conversationActions}>
             {item.unread_count > 0 && (
               <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
                 <Text style={[styles.unreadCount, { color: colors.card }]}>
@@ -121,9 +161,18 @@ export default function MessagesScreen() {
             )}
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+
+        <View style={styles.conversationContent}>
+          <Text 
+            style={[styles.lastMessage, { color: colors.textSecondary }]}
+            numberOfLines={2}
+          >
+            {item.last_message_content || 'No messages yet'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderSearchResult = ({ item }: { item: UserSearchResult }) => (
     <TouchableOpacity
@@ -231,6 +280,14 @@ export default function MessagesScreen() {
           }
         />
       )}
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        visible={userProfileModalVisible}
+        onClose={handleCloseUserProfile}
+        userProfile={selectedUserProfile}
+        onMessagePress={() => selectedUserProfile && startConversation(selectedUserProfile.id)}
+      />
     </SafeAreaView>
   );
 }
@@ -283,6 +340,12 @@ const styles = StyleSheet.create({
   conversationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   avatar: {
     width: 48,
@@ -292,37 +355,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  avatarText: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-  },
-  conversationInfo: {
+  userInfo: {
     flex: 1,
-  },
-  conversationTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
   },
   conversationName: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
   },
-  conversationTime: {
+  postDate: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
   },
-  conversationBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  conversationActions: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  conversationContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   lastMessage: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    flex: 1,
-    marginRight: 8,
+    lineHeight: 18,
   },
   unreadBadge: {
     minWidth: 20,
