@@ -3,16 +3,19 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Settings, CreditCard as Edit3, Moon, Sun, LogOut, User, ChevronDown, Calendar } from 'lucide-react-native';
+import { Settings, CreditCard as Edit3, Moon, Sun, LogOut, User, ChevronDown, Calendar, Lock, Shield } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
 
 export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
-  const { profile, signOut, updateProfile } = useAuth();
+  const { profile, signOut, updateProfile, changePassword, deactivateAccount } = useAuth();
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [genderPickerVisible, setGenderPickerVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [signOutConfirmVisible, setSignOutConfirmVisible] = useState(false);
+  const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
+  const [deactivateModalVisible, setDeactivateModalVisible] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: '',
     birthday: '',
@@ -21,7 +24,13 @@ export default function ProfileScreen() {
     section: '',
     course: '',
   });
-  const [signOutConfirmVisible, setSignOutConfirmVisible] = useState(false); // NEW
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [deactivatePassword, setDeactivatePassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // Gender options that match the database constraint
   const genderOptions = [
@@ -147,6 +156,95 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!passwordForm.currentPassword.trim() || !passwordForm.newPassword.trim() || !passwordForm.confirmPassword.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Information',
+        text2: 'Please fill in all fields',
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      Toast.show({
+        type: 'error',
+        text1: 'Password Mismatch',
+        text2: 'New passwords do not match',
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      Toast.show({
+        type: 'error',
+        text1: 'Password Too Short',
+        text2: 'Password must be at least 6 characters',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      Toast.show({
+        type: 'success',
+        text1: 'Password Changed',
+        text2: 'Your password has been updated successfully',
+      });
+      setChangePasswordModalVisible(false);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to change password',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    if (!deactivatePassword.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Password',
+        text2: 'Please enter your password to confirm',
+      });
+      return;
+    }
+
+    Alert.alert(
+      'Deactivate Account',
+      'Are you sure you want to deactivate your account? This action cannot be undone and all your data will be permanently deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Deactivate', style: 'destructive', onPress: async () => {
+            setLoading(true);
+            try {
+              await deactivateAccount(deactivatePassword);
+              Toast.show({
+                type: 'success',
+                text1: 'Account Deactivated',
+                text2: 'Your account has been deactivated',
+              });
+            } catch (error: any) {
+              Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: error.message || 'Failed to deactivate account',
+              });
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -222,6 +320,14 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
+          {/* Change Password Button */}
+          <TouchableOpacity style={styles.settingRow} onPress={() => setChangePasswordModalVisible(true)}>
+            <View style={styles.settingLeft}>
+              <Lock size={20} color={colors.primary} />
+              <Text style={[styles.settingText, { color: colors.primary }]}>Change Password</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Theme toggle and sign out ... */}
           <TouchableOpacity style={styles.settingRow} onPress={toggleTheme}>
             <View style={styles.settingLeft}>
@@ -237,6 +343,14 @@ export default function ProfileScreen() {
             <View style={styles.settingLeft}>
               <LogOut size={20} color={colors.error} />
               <Text style={[styles.settingText, { color: colors.error }]}>Sign Out</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Deactivate Account Button */}
+          <TouchableOpacity style={styles.settingRow} onPress={() => setDeactivateModalVisible(true)}>
+            <View style={styles.settingLeft}>
+              <Shield size={20} color={colors.error} />
+              <Text style={[styles.settingText, { color: colors.error }]}>Deactivate Account</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -529,6 +643,112 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Change Password Modal */}
+      <Modal visible={changePasswordModalVisible} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => setChangePasswordModalVisible(false)}>
+              <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Change Password</Text>
+            <TouchableOpacity onPress={handleChangePassword} disabled={loading}>
+              <Text style={[styles.modalSave, { color: colors.primary, opacity: loading ? 0.5 : 1 }]}>
+                {loading ? 'Changing...' : 'Change'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Current Password</Text>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                value={passwordForm.currentPassword}
+                onChangeText={(text) => setPasswordForm(prev => ({ ...prev, currentPassword: text }))}
+                placeholder="Enter your current password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>New Password</Text>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                value={passwordForm.newPassword}
+                onChangeText={(text) => setPasswordForm(prev => ({ ...prev, newPassword: text }))}
+                placeholder="Enter your new password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Confirm New Password</Text>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                value={passwordForm.confirmPassword}
+                onChangeText={(text) => setPasswordForm(prev => ({ ...prev, confirmPassword: text }))}
+                placeholder="Confirm your new password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+              />
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Deactivate Account Modal */}
+      <Modal visible={deactivateModalVisible} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => setDeactivateModalVisible(false)}>
+              <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Deactivate Account</Text>
+            <View style={{ width: 60 }} />
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Password Confirmation</Text>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                value={deactivatePassword}
+                onChangeText={setDeactivatePassword}
+                placeholder="Enter your password to confirm"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+              />
+            </View>
+
+            <View style={[styles.warningBox, { backgroundColor: colors.error + '20', borderColor: colors.error }]}>
+              <Text style={[styles.warningTitle, { color: colors.error }]}>⚠️ Warning</Text>
+              <Text style={[styles.warningText, { color: colors.text }]}>
+                This action will permanently delete your account and all associated data including:
+              </Text>
+              <Text style={[styles.warningText, { color: colors.text }]}>
+                • Your profile information{'\n'}
+                • All your posts{'\n'}
+                • All your comments{'\n'}
+                • All your messages{'\n'}
+                • This action cannot be undone
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.deactivateButton, { backgroundColor: colors.error }]}
+              onPress={handleDeactivateAccount}
+              disabled={loading}
+            >
+              <Text style={[styles.deactivateButtonText, { color: colors.card }]}>
+                {loading ? 'Deactivating...' : 'Deactivate Account'}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -729,5 +949,32 @@ const styles = StyleSheet.create({
   selectedDateText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
+  },
+  warningBox: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginVertical: 16,
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    lineHeight: 20,
+  },
+  deactivateButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  deactivateButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
   },
 });
