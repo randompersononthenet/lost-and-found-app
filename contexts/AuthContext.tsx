@@ -24,6 +24,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  deactivateAccount: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -201,6 +203,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    if (!user) throw new Error('No user logged in');
+
+    // First verify the current password
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: user.email!,
+      password: currentPassword,
+    });
+
+    if (verifyError) {
+      throw new Error('Current password is incorrect');
+    }
+
+    // Update the password
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) throw error;
+  };
+
+  const deactivateAccount = async (password: string) => {
+    if (!user) throw new Error('No user logged in');
+
+    // First verify the password
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: user.email!,
+      password: password,
+    });
+
+    if (verifyError) {
+      throw new Error('Password is incorrect');
+    }
+
+    // Delete the user account
+    const { error } = await supabase.auth.admin.deleteUser(user.id);
+
+    if (error) {
+      // If admin delete fails, try to delete the user profile and sign out
+      try {
+        await supabase.from('profiles').delete().eq('id', user.id);
+        await supabase.auth.signOut();
+      } catch (deleteError) {
+        throw new Error('Failed to deactivate account. Please contact support.');
+      }
+    } else {
+      // Sign out after successful deletion
+      await supabase.auth.signOut();
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -211,6 +264,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       updateProfile,
       forgotPassword,
+      changePassword,
+      deactivateAccount,
     }}>
       {children}
     </AuthContext.Provider>
