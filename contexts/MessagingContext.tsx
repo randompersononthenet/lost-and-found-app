@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 import Toast from 'react-native-toast-message';
+import { sendMessageNotification } from '@/lib/pushNotifications';
 
 interface Message {
   id: string;
@@ -227,6 +228,35 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       // Mark conversation as read for sender
       await markConversationAsRead(conversationId);
+
+      // Send push notification to other participants
+      try {
+        // Get conversation participants
+        const { data: participants } = await supabase
+          .from('conversation_participants')
+          .select('user_id')
+          .eq('conversation_id', conversationId);
+
+        if (participants) {
+          const recipientIds = participants
+            .map(p => p.user_id)
+            .filter(id => id !== user.id);
+
+          // Send notification to each recipient
+          for (const recipientId of recipientIds) {
+            await sendMessageNotification(
+              recipientId,
+              user.user_metadata?.full_name || 'Someone',
+              content.trim().length > 50 ? content.trim().substring(0, 50) + '...' : content.trim(),
+              conversationId,
+              data.id
+            );
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending push notification:', notificationError);
+        // Don't show error to user as message was still sent successfully
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       Toast.show({

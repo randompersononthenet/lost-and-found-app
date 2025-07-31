@@ -8,6 +8,7 @@ import { ArrowLeft, Send, Trash2 } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
+import { sendCommentNotification } from '@/lib/pushNotifications';
 
 interface Comment {
   id: string;
@@ -26,6 +27,7 @@ interface Post {
   description: string;
   category: 'lost' | 'found';
   images: string[];
+  user_id: string;
   profiles: {
     full_name: string;
   };
@@ -62,6 +64,7 @@ export default function CommentsScreen() {
           description,
           category,
           images,
+          user_id,
           profiles:user_id (
             full_name
           )
@@ -70,7 +73,21 @@ export default function CommentsScreen() {
         .single();
 
       if (error) throw error;
-      setPost(data);
+      
+      // Transform the data to match the Post interface
+      const transformedData: Post = {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        images: data.images,
+        user_id: data.user_id,
+        profiles: {
+          full_name: data.profiles?.[0]?.full_name || 'Unknown User'
+        }
+      };
+      
+      setPost(transformedData);
     } catch (error) {
       console.error('Error loading post:', error);
       Toast.show({
@@ -100,7 +117,20 @@ export default function CommentsScreen() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setComments(data || []);
+      
+      // Transform the data to match the Comment interface
+      const transformedComments: Comment[] = (data || []).map(comment => ({
+        id: comment.id,
+        content: comment.content,
+        created_at: comment.created_at,
+        user_id: comment.user_id,
+        profiles: {
+          full_name: comment.profiles?.[0]?.full_name || 'Unknown User',
+          avatar_url: comment.profiles?.[0]?.avatar_url
+        }
+      }));
+      
+      setComments(transformedComments);
     } catch (error) {
       console.error('Error loading comments:', error);
     }
@@ -119,18 +149,36 @@ export default function CommentsScreen() {
     setSubmitting(true);
 
     try {
-      const { error } = await supabase
+      const { data: commentData, error } = await supabase
         .from('comments')
         .insert({
           post_id: postId,
           user_id: user.id,
           content: newComment.trim(),
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
       setNewComment('');
       loadComments(); // Reload comments to show the new one
+
+      // Send push notification to post author (if not commenting on own post)
+      if (post && post.profiles && user.id !== post.user_id) {
+        try {
+          await sendCommentNotification(
+            post.user_id,
+            user.user_metadata?.full_name || 'Someone',
+            post.title,
+            postId,
+            commentData.id
+          );
+        } catch (notificationError) {
+          console.error('Error sending push notification:', notificationError);
+          // Don't show error to user as comment was still posted successfully
+        }
+      }
 
       Toast.show({
         type: 'success',
