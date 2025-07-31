@@ -18,6 +18,7 @@ interface SearchResult {
   date_lost_found?: string;
   images: string[];
   created_at: string;
+  user_id: string;
   profiles: {
     full_name: string;
     avatar_url?: string;

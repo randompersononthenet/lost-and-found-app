@@ -642,11 +642,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-Medium',
   },
-  postActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+
   actionIcon: {
     padding: 4,
   },

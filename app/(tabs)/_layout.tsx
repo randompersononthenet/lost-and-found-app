@@ -1,9 +1,11 @@
 import { Tabs } from 'expo-router';
-import { Chrome as Home, Plus, MessageCircle, User, Search } from 'lucide-react-native';
+import { Chrome as Home, Plus, MessageCircle, User, Search, Bell } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const { unreadCount } = useNotifications();
 
   return (
     <Tabs
@@ -57,6 +59,16 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <MessageCircle size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Notifications',
+          tabBarIcon: ({ size, color }) => (
+            <Bell size={size} color={color} />
+          ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
       <Tabs.Screen
