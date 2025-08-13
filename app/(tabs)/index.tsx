@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Heart, MessageCircle, Share, MapPin, Calendar, X, Edit, Trash2 } from 'lucide-react-native';
+import { Heart, MessageCircle, Share, MapPin, Calendar, X, Edit, Trash2, Search } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
@@ -515,6 +515,12 @@ export default function FeedScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Lost & Found</Text>
+        <TouchableOpacity
+          style={styles.searchButton}
+          onPress={() => router.push('/search')}
+        >
+          <Search size={24} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -575,6 +581,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
@@ -582,6 +591,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontFamily: 'Inter-Bold',
+  },
+  searchButton: {
+    padding: 8,
+    borderRadius: 8,
   },
   feedContent: {
     paddingVertical: 10,
