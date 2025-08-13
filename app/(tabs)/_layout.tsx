@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Chrome as Home, Plus, MessageCircle, User, Search, Bell } from 'lucide-react-native';
+import { Chrome as Home, Plus, MessageCircle, User, Bell } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 
@@ -34,15 +34,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: 'Search',
-          tabBarIcon: ({ size, color }) => (
-            <Search size={size} color={color} />
-          ),
-        }}
-      />
+
       <Tabs.Screen
         name="create"
         options={{

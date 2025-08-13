@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Search, Filter, MapPin, Calendar, Heart, MessageCircle, ChevronDown } from 'lucide-react-native';
+import { Search, Filter, MapPin, Calendar, Heart, MessageCircle, ChevronDown, ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
@@ -437,7 +437,14 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <ArrowLeft size={24} color={colors.text} />
+        </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Search</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.searchContainer}>
@@ -449,7 +456,15 @@ export default function SearchScreen() {
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onSubmitEditing={performSearch}
+            returnKeyType="search"
           />
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={performSearch}
+          >
+            <Text style={[styles.searchButtonText, { color: colors.primary }]}>Search</Text>
+          </TouchableOpacity>
         </View>
 
         <FlatList
@@ -599,10 +614,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 10,
   },
   headerTitle: {
     fontSize: 24,
     fontFamily: 'Inter-Bold',
+    flex: 1,
+  },
+  headerSpacer: {
+    width: 40, // Adjust as needed for spacing
   },
   searchContainer: {
     padding: 16,
@@ -621,6 +646,17 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
+  },
+  searchButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#E0E0E0', // Example background color
+    marginLeft: 8,
+  },
+  searchButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
   },
   categoriesContainer: {
     paddingHorizontal: 4,
