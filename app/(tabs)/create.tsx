@@ -16,11 +16,24 @@ export default function CreatePostScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<'lost' | 'found'>('lost');
+  const [itemCategory, setItemCategory] = useState<string>('Others');
   const [location, setLocation] = useState('');
   const [dateLostFound, setDateLostFound] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+
+  const availableItemCategories = [
+    'Electronics',
+    'Wallets',
+    'Keys',
+    'Documents',
+    'Clothing',
+    'Bags',
+    'Accessories',
+    'IDs',
+    'Others',
+  ];
 
   // Helper function to format date for display
   const formatDateForDisplay = (dateString: string) => {
@@ -185,6 +198,7 @@ export default function CreatePostScreen() {
         title: title.trim(),
         description: description.trim(),
         category,
+        item_category: itemCategory,
         location: location.trim() || null,
         date_lost_found: dateLostFound || null,
         images: imageUrls,
@@ -207,6 +221,7 @@ export default function CreatePostScreen() {
       setTitle('');
       setDescription('');
       setCategory('lost');
+      setItemCategory('Others');
       setLocation('');
       setDateLostFound('');
       setImages([]);
@@ -251,7 +266,7 @@ export default function CreatePostScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Category Selection */}
+        {/* Category Selection (Lost/Found) */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Category</Text>
           <View style={styles.categoryContainer}>
@@ -293,6 +308,25 @@ export default function CreatePostScreen() {
                 Found Item
               </Text>
             </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Item Category Selection */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Item Category</Text>
+          <View style={styles.categoryContainer}>
+            {availableItemCategories.map((c) => (
+              <TouchableOpacity
+                key={c}
+                onPress={() => setItemCategory(c)}
+                style={[
+                  styles.categoryOption,
+                  { borderColor: colors.border, backgroundColor: itemCategory === c ? colors.primary : colors.surface },
+                ]}
+              >
+                <Text style={{ color: itemCategory === c ? colors.card : colors.text }}>{c}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -585,14 +619,15 @@ const styles = StyleSheet.create({
   },
   categoryContainer: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   categoryOption: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
     borderWidth: 1,
-    alignItems: 'center',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 8,
   },
   categoryOptionText: {
     fontSize: 14,
