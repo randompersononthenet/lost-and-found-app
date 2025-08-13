@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Search, Filter, MapPin, Calendar, Heart, MessageCircle } from 'lucide-react-native';
+import { Search, Filter, MapPin, Calendar, Heart, MessageCircle, ChevronDown } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
@@ -14,6 +14,7 @@ interface SearchResult {
   title: string;
   description: string;
   category: 'lost' | 'found';
+  item_category?: string;
   location?: string;
   date_lost_found?: string;
   images: string[];
@@ -33,12 +34,14 @@ export default function SearchScreen() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'lost' | 'found'>('all');
+  const [selectedItemCategory, setSelectedItemCategory] = useState<string>('all');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [userProfileModalVisible, setUserProfileModalVisible] = useState(false);
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   const [loadingUserProfile, setLoadingUserProfile] = useState(false);
+  const [itemCategoryModalVisible, setItemCategoryModalVisible] = useState(false);
 
   const categories = [
     { key: 'all', label: 'All Items' },
@@ -46,8 +49,26 @@ export default function SearchScreen() {
     { key: 'found', label: 'Found Items' },
   ];
 
+  const itemCategories = [
+    { key: 'all', label: 'All Types' },
+    { key: 'Electronics', label: 'Electronics' },
+    { key: 'Wallets', label: 'Wallets' },
+    { key: 'Keys', label: 'Keys' },
+    { key: 'Documents', label: 'Documents' },
+    { key: 'Clothing', label: 'Clothing' },
+    { key: 'Bags', label: 'Bags' },
+    { key: 'Accessories', label: 'Accessories' },
+    { key: 'IDs', label: 'IDs' },
+    { key: 'Others', label: 'Others' },
+  ];
+
+  const getItemCategoryLabel = (key: string) => {
+    const category = itemCategories.find(cat => cat.key === key);
+    return category ? category.label : 'All Types';
+  };
+
   const performSearch = async () => {
-    if (!searchQuery.trim()) {
+    if (!searchQuery.trim() && selectedCategory === 'all' && selectedItemCategory === 'all') {
       setSearchResults([]);
       setHasSearched(false);
       return;
@@ -69,12 +90,18 @@ export default function SearchScreen() {
           comments (count)
         `)
         .eq('status', 'active')
-        .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,location.ilike.%${searchQuery}%`)
         .order('created_at', { ascending: false });
 
-      // Add category filter if not "all"
+      if (searchQuery.trim()) {
+        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,location.ilike.%${searchQuery}%`);
+      }
+
       if (selectedCategory !== 'all') {
         query = query.eq('category', selectedCategory);
+      }
+
+      if (selectedItemCategory !== 'all') {
+        query = query.eq('item_category', selectedItemCategory);
       }
 
       const { data, error } = await query;
@@ -94,18 +121,13 @@ export default function SearchScreen() {
           return {
             ...post,
             user_liked: !!userLike,
-          };
+          } as SearchResult;
         })
       );
 
       setSearchResults(resultsWithLikes);
     } catch (error) {
       console.error('Error searching posts:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Search Error',
-        text2: 'Failed to search posts. Please try again.',
-      });
     } finally {
       setLoading(false);
     }
@@ -118,7 +140,7 @@ export default function SearchScreen() {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, selectedItemCategory]);
 
   const handleViewComments = (postId: string) => {
     router.push({
@@ -462,6 +484,63 @@ export default function SearchScreen() {
         />
       </View>
 
+      {/* Item Category Filter */}
+      <View style={styles.itemCategoryContainer}>
+        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Item Type:</Text>
+        <TouchableOpacity
+          style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => setItemCategoryModalVisible(true)}
+        >
+          <Text style={[styles.dropdownText, { color: colors.text }]}>
+            {getItemCategoryLabel(selectedItemCategory)}
+          </Text>
+          <ChevronDown size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Item Category Modal */}
+      <Modal
+        visible={itemCategoryModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setItemCategoryModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setItemCategoryModalVisible(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Item Type</Text>
+            {itemCategories.map((category) => (
+              <TouchableOpacity
+                key={category.key}
+                style={[
+                  styles.modalOption,
+                  { borderBottomColor: colors.border }
+                ]}
+                onPress={() => {
+                  setSelectedItemCategory(category.key);
+                  setItemCategoryModalVisible(false);
+                }}
+              >
+                <Text style={[
+                  styles.modalOptionText,
+                  { 
+                    color: selectedItemCategory === category.key ? colors.primary : colors.text 
+                  }
+                ]}>
+                  {category.label}
+                </Text>
+                {selectedItemCategory === category.key && (
+                  <View style={[styles.checkmark, { backgroundColor: colors.primary }]} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <FlatList
         data={searchResults}
         renderItem={renderSearchResult}
@@ -547,10 +626,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
     borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     marginRight: 8,
   },
   categoryChipText: {
@@ -756,5 +835,71 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  itemCategoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginRight: 12,
+    minWidth: 70,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 120,
+  },
+  dropdownText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    maxWidth: 300,
+    borderRadius: 12,
+    padding: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  modalOptionText: {
+    fontSize: 16,
+  },
+  checkmark: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });
