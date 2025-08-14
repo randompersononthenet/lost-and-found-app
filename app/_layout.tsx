@@ -44,13 +44,13 @@ export default function RootLayout() {
       <AuthProvider>
         <MessagingProvider>
           <NotificationProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="auth" />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="auto" />
-            <Toast />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="auth" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+          <Toast />
           </NotificationProvider>
         </MessagingProvider>
       </AuthProvider>
