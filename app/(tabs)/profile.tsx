@@ -320,6 +320,14 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
+          {/* Resolved Posts Button */}
+          <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/resolved-posts')}>
+            <View style={styles.settingLeft}>
+              <Calendar size={20} color={colors.success} />
+              <Text style={[styles.settingText, { color: colors.success }]}>Resolved Posts</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Change Password Button */}
           <TouchableOpacity style={styles.settingRow} onPress={() => setChangePasswordModalVisible(true)}>
             <View style={styles.settingLeft}>

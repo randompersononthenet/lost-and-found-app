@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Heart, MessageCircle, Share, MapPin, Calendar, X, Edit, Trash2, Search } from 'lucide-react-native';
+import { Heart, MessageCircle, Share, MapPin, Calendar, X, Edit, Trash2, Search, MoreVertical } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
@@ -14,6 +14,7 @@ interface Post {
   title: string;
   description: string;
   category: 'lost' | 'found';
+  status: 'active' | 'resolved' | 'claimed';
   location?: string;
   date_lost_found?: string;
   images: string[];
@@ -39,6 +40,7 @@ export default function FeedScreen() {
   const [userProfileModalVisible, setUserProfileModalVisible] = useState(false);
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   const [loadingUserProfile, setLoadingUserProfile] = useState(false);
+  const [kebabMenuVisible, setKebabMenuVisible] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -259,8 +261,38 @@ export default function FeedScreen() {
     });
   };
 
+  const markAsResolved = async (postId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({ status: 'resolved' })
+        .eq('id', postId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setPosts(prev => prev.filter(post => post.id !== postId));
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Post Marked as Resolved',
+        text2: 'The item has been marked as resolved and removed from the feed.',
+      });
+    } catch (error) {
+      console.error('Error marking post as resolved:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to mark post as resolved. Please try again.',
+      });
+    }
+  };
+
   const renderPost = ({ item }: { item: Post }) => (
-    <View style={[styles.postCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={[styles.postCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
       {/* Post Header */}
       <View style={styles.postHeader}>
         <TouchableOpacity 
@@ -281,7 +313,9 @@ export default function FeedScreen() {
             </Text>
           </View>
         </TouchableOpacity>
-        <View style={styles.headerActions}>
+        
+        <View style={styles.postHeaderActions}>
+          {/* Category Badge */}
           <View style={[
             styles.categoryBadge,
             { backgroundColor: item.category === 'lost' ? colors.error : colors.success }
@@ -291,25 +325,76 @@ export default function FeedScreen() {
             </Text>
           </View>
           
-          {/* Edit/Delete buttons for post owner */}
-          {user && item.user_id === user.id && (
-            <View style={styles.postHeaderActions}>
-              <TouchableOpacity
-                style={styles.actionIcon}
-                onPress={() => handleEditPost(item)}
-              >
-                <Edit size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionIcon}
-                onPress={() => handleDeletePost(item)}
-              >
-                <Trash2 size={16} color={colors.error} />
-              </TouchableOpacity>
-            </View>
+          {/* Status Badge */}
+          <View style={[
+            styles.statusBadge,
+            { 
+              backgroundColor: item.status === 'resolved' ? colors.success : 
+                             item.status === 'claimed' ? colors.warning : colors.primary 
+            }
+          ]}>
+            <Text style={[styles.statusText, { color: colors.card }]}>
+              {item.status === 'resolved' ? 'Resolved' : 
+               item.status === 'claimed' ? 'Claimed' : 'Active'}
+            </Text>
+          </View>
+          
+          {/* Kebab Menu for own posts */}
+          {item.user_id === user?.id && (
+            <TouchableOpacity
+              style={styles.kebabButton}
+              onPress={() => setKebabMenuVisible(kebabMenuVisible === item.id ? null : item.id)}
+            >
+              <MoreVertical size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
           )}
         </View>
       </View>
+
+      {/* Kebab Menu Modal */}
+      {kebabMenuVisible === item.id && (
+        <>
+          <TouchableOpacity
+            style={styles.kebabBackdrop}
+            activeOpacity={1}
+            onPress={() => setKebabMenuVisible(null)}
+          />
+          <View style={[styles.kebabMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={styles.kebabMenuItem}
+              onPress={() => {
+                setKebabMenuVisible(null);
+                router.push(`/edit?postId=${item.id}`);
+              }}
+            >
+              <Edit size={16} color={colors.textSecondary} />
+              <Text style={[styles.kebabMenuText, { color: colors.text }]}>Edit Post</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.kebabMenuItem}
+              onPress={() => {
+                setKebabMenuVisible(null);
+                markAsResolved(item.id);
+              }}
+            >
+              <View style={[styles.resolveIcon, { backgroundColor: colors.success }]} />
+              <Text style={[styles.kebabMenuText, { color: colors.text }]}>Mark Resolved</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.kebabMenuItem}
+              onPress={() => {
+                setKebabMenuVisible(null);
+                handleDeletePost(item.id);
+              }}
+            >
+              <Trash2 size={16} color={colors.error} />
+              <Text style={[styles.kebabMenuText, { color: colors.error }]}>Delete Post</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
 
       {/* Post Content */}
       <View style={styles.postContent}>
@@ -655,10 +740,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-Medium',
   },
-
-  actionIcon: {
-    padding: 4,
-  },
   postContent: {
     paddingHorizontal: 16,
     paddingBottom: 12,
@@ -829,5 +910,58 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  kebabButton: {
+    padding: 4,
+  },
+  kebabMenu: {
+    position: 'absolute',
+    top: 50,
+    right: 16,
+    width: 150,
+    borderRadius: 12,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1000,
+  },
+  kebabMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  kebabMenuText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    marginLeft: 12,
+  },
+  resolveIcon: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  kebabBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 999,
   },
 });

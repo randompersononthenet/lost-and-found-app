@@ -14,6 +14,7 @@ interface SearchResult {
   title: string;
   description: string;
   category: 'lost' | 'found';
+  status: 'active' | 'resolved' | 'claimed';
   item_category?: string;
   location?: string;
   date_lost_found?: string;
@@ -35,6 +36,7 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'lost' | 'found'>('all');
   const [selectedItemCategory, setSelectedItemCategory] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'resolved' | 'claimed'>('active');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -42,6 +44,7 @@ export default function SearchScreen() {
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   const [loadingUserProfile, setLoadingUserProfile] = useState(false);
   const [itemCategoryModalVisible, setItemCategoryModalVisible] = useState(false);
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
 
   const categories = [
     { key: 'all', label: 'All Items' },
@@ -62,13 +65,20 @@ export default function SearchScreen() {
     { key: 'Others', label: 'Others' },
   ];
 
+  const statusOptions = [
+    { key: 'active', label: 'Active Only' },
+    { key: 'resolved', label: 'Resolved' },
+    { key: 'claimed', label: 'Claimed' },
+    { key: 'all', label: 'All Status' },
+  ];
+
   const getItemCategoryLabel = (key: string) => {
     const category = itemCategories.find(cat => cat.key === key);
     return category ? category.label : 'All Types';
   };
 
   const performSearch = async () => {
-    if (!searchQuery.trim() && selectedCategory === 'all' && selectedItemCategory === 'all') {
+    if (!searchQuery.trim() && selectedCategory === 'all' && selectedItemCategory === 'all' && selectedStatus === 'active') {
       setSearchResults([]);
       setHasSearched(false);
       return;
@@ -89,7 +99,6 @@ export default function SearchScreen() {
           likes (count),
           comments (count)
         `)
-        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (searchQuery.trim()) {
@@ -102,6 +111,10 @@ export default function SearchScreen() {
 
       if (selectedItemCategory !== 'all') {
         query = query.eq('item_category', selectedItemCategory);
+      }
+
+      if (selectedStatus !== 'all') {
+        query = query.eq('status', selectedStatus);
       }
 
       const { data, error } = await query;
@@ -140,7 +153,7 @@ export default function SearchScreen() {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, selectedCategory, selectedItemCategory]);
+  }, [searchQuery, selectedCategory, selectedItemCategory, selectedStatus]);
 
   const handleViewComments = (postId: string) => {
     router.push({
@@ -556,6 +569,63 @@ export default function SearchScreen() {
         </TouchableOpacity>
       </Modal>
 
+      {/* Status Filter */}
+      <View style={styles.statusFilterContainer}>
+        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Status:</Text>
+        <TouchableOpacity
+          style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => setStatusModalVisible(true)}
+        >
+          <Text style={[styles.dropdownText, { color: colors.text }]}>
+            {statusOptions.find(opt => opt.key === selectedStatus)?.label || 'All Status'}
+          </Text>
+          <ChevronDown size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Status Filter Modal */}
+      <Modal
+        visible={statusModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatusModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setStatusModalVisible(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Status</Text>
+            {statusOptions.map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                style={[
+                  styles.modalOption,
+                  { borderBottomColor: colors.border }
+                ]}
+                onPress={() => {
+                  setSelectedStatus(option.key as 'all' | 'active' | 'resolved' | 'claimed');
+                  setStatusModalVisible(false);
+                }}
+              >
+                <Text style={[
+                  styles.modalOptionText,
+                  { 
+                    color: selectedStatus === option.key ? colors.primary : colors.text 
+                  }
+                ]}>
+                  {option.label}
+                </Text>
+                {selectedStatus === option.key && (
+                  <View style={[styles.checkmark, { backgroundColor: colors.primary }]} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <FlatList
         data={searchResults}
         renderItem={renderSearchResult}
@@ -937,5 +1007,13 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  statusFilterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
 });
