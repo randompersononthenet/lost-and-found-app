@@ -7,6 +7,8 @@ import { ArrowLeft, Mail, Send, Star } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as Linking from 'expo-linking';
 import Toast from 'react-native-toast-message';
+import * as MailComposer from 'expo-mail-composer';
+import * as Clipboard from 'expo-clipboard';
 
 export default function FeedbackScreen() {
   const { colors } = useTheme();
@@ -48,6 +50,28 @@ Best regards,
 ${user?.user_metadata?.full_name || 'App User'}
       `.trim();
 
+      // Prefer native mail composer if available
+      const isMailComposerAvailable = await MailComposer.isAvailableAsync();
+      if (isMailComposerAvailable) {
+        const result = await MailComposer.composeAsync({
+          recipients: ['sagapaedrian@gmail.com'],
+          subject,
+          body,
+          isHtml: false,
+        });
+        if (result.status === 'sent') {
+          Toast.show({ type: 'success', text1: 'Thanks!', text2: 'Your feedback was sent.' });
+          setFeedback('');
+          setRating(0);
+          setLoading(false);
+          return;
+        }
+        // If user canceled, just stop loading gracefully
+        setLoading(false);
+        return;
+      }
+
+      // Fallback to mailto: URL when composer is not available
       const mailtoUrl = `mailto:sagapaedrian@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
       const canOpen = await Linking.canOpenURL(mailtoUrl);
@@ -63,19 +87,12 @@ ${user?.user_metadata?.full_name || 'App User'}
         setFeedback('');
         setRating(0);
       } else {
+        // Final fallback: copy feedback to clipboard
+        await Clipboard.setStringAsync(`Subject: ${subject}\n\n${body}`);
         Alert.alert(
           'No Email Client Found',
-          'Please install an email app or copy the feedback manually.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Copy Feedback', 
-              onPress: () => {
-                // You could implement clipboard functionality here
-                Alert.alert('Feedback Copied', 'Please paste it in your email client.');
-              }
-            }
-          ]
+          'We copied your feedback to the clipboard. Please paste it into your preferred email app and send it to sagapaedrian@gmail.com.',
+          [{ text: 'OK' }]
         );
       }
     } catch (error) {
