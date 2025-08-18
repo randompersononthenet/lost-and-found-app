@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Settings, CreditCard as Edit3, Moon, Sun, LogOut, User, ChevronDown, Calendar, Lock, Shield } from 'lucide-react-native';
+import { Settings, CreditCard as Edit3, Moon, Sun, LogOut, User, ChevronDown, Calendar, Lock, Shield, MessageSquare } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
 
@@ -325,6 +325,14 @@ export default function ProfileScreen() {
             <View style={styles.settingLeft}>
               <Calendar size={20} color={colors.success} />
               <Text style={[styles.settingText, { color: colors.success }]}>Resolved Posts</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Feedback Button */}
+          <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/feedback')}>
+            <View style={styles.settingLeft}>
+              <MessageSquare size={20} color={colors.primary} />
+              <Text style={[styles.settingText, { color: colors.primary }]}>Send Feedback</Text>
             </View>
           </TouchableOpacity>
 
