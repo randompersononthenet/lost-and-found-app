@@ -341,7 +341,7 @@ export default function FeedScreen() {
           
           {/* Kebab Menu for own posts */}
           {item.user_id === user?.id && (
-            <TouchableOpacity
+              <TouchableOpacity
               style={styles.kebabButton}
               onPress={() => setKebabMenuVisible(kebabMenuVisible === item.id ? null : item.id)}
             >
@@ -366,12 +366,12 @@ export default function FeedScreen() {
                 setKebabMenuVisible(null);
                 router.push(`/edit?postId=${item.id}`);
               }}
-            >
-              <Edit size={16} color={colors.textSecondary} />
+              >
+                <Edit size={16} color={colors.textSecondary} />
               <Text style={[styles.kebabMenuText, { color: colors.text }]}>Edit Post</Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
             
-            <TouchableOpacity
+              <TouchableOpacity
               style={styles.kebabMenuItem}
               onPress={() => {
                 setKebabMenuVisible(null);
@@ -388,13 +388,13 @@ export default function FeedScreen() {
                 setKebabMenuVisible(null);
                 handleDeletePost(item.id);
               }}
-            >
-              <Trash2 size={16} color={colors.error} />
+              >
+                <Trash2 size={16} color={colors.error} />
               <Text style={[styles.kebabMenuText, { color: colors.error }]}>Delete Post</Text>
-            </TouchableOpacity>
-          </View>
+              </TouchableOpacity>
+            </View>
         </>
-      )}
+          )}
 
       {/* Post Content */}
       <View style={styles.postContent}>
