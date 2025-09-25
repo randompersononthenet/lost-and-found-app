@@ -16,6 +16,7 @@ export default function ProfileScreen() {
   const [signOutConfirmVisible, setSignOutConfirmVisible] = useState(false);
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
   const [deactivateModalVisible, setDeactivateModalVisible] = useState(false);
+  const [quickActionsVisible, setQuickActionsVisible] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: '',
     birthday: '',
@@ -312,36 +313,13 @@ export default function ProfileScreen() {
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Settings</Text>
 
-          {/* My Posts Button */}
-          <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/my-posts')}>
+          {/* Quick Actions (groups My Posts, Resolved Posts, Send Feedback, Change Password) */}
+          <TouchableOpacity style={styles.settingRow} onPress={() => setQuickActionsVisible(true)}>
             <View style={styles.settingLeft}>
-              <Edit3 size={20} color={colors.primary} />
-              <Text style={[styles.settingText, { color: colors.primary }]}>My Posts</Text>
+              <Settings size={20} color={colors.text} />
+              <Text style={[styles.settingText, { color: colors.text }]}>Quick Actions</Text>
             </View>
-          </TouchableOpacity>
-
-          {/* Resolved Posts Button */}
-          <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/resolved-posts')}>
-            <View style={styles.settingLeft}>
-              <Calendar size={20} color={colors.success} />
-              <Text style={[styles.settingText, { color: colors.success }]}>Resolved Posts</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Feedback Button */}
-          <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/feedback')}>
-            <View style={styles.settingLeft}>
-              <MessageSquare size={20} color={colors.primary} />
-              <Text style={[styles.settingText, { color: colors.primary }]}>Send Feedback</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Change Password Button */}
-          <TouchableOpacity style={styles.settingRow} onPress={() => setChangePasswordModalVisible(true)}>
-            <View style={styles.settingLeft}>
-              <Lock size={20} color={colors.primary} />
-              <Text style={[styles.settingText, { color: colors.primary }]}>Change Password</Text>
-            </View>
+            <ChevronDown size={18} color={colors.textSecondary} />
           </TouchableOpacity>
 
           {/* Theme toggle and sign out ... */}
@@ -359,14 +337,6 @@ export default function ProfileScreen() {
             <View style={styles.settingLeft}>
               <LogOut size={20} color={colors.error} />
               <Text style={[styles.settingText, { color: colors.error }]}>Sign Out</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Deactivate Account Button */}
-          <TouchableOpacity style={styles.settingRow} onPress={() => setDeactivateModalVisible(true)}>
-            <View style={styles.settingLeft}>
-              <Shield size={20} color={colors.error} />
-              <Text style={[styles.settingText, { color: colors.error }]}>Deactivate Account</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -713,6 +683,62 @@ export default function ProfileScreen() {
             </View>
           </ScrollView>
         </SafeAreaView>
+      </Modal>
+
+      {/* Quick Actions Modal */}
+      <Modal
+        visible={quickActionsVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQuickActionsVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 16, width: '88%', borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter-SemiBold', color: colors.text, marginBottom: 12 }}>Quick Actions</Text>
+
+            {/* Posts Group */}
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter-Medium', color: colors.textSecondary, marginBottom: 6 }}>Posts</Text>
+              <TouchableOpacity style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center' }} onPress={() => { setQuickActionsVisible(false); router.push('/my-posts'); }}>
+                <Edit3 size={18} color={colors.text} />
+                <Text style={{ marginLeft: 10, color: colors.text }}>My Posts</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center' }} onPress={() => { setQuickActionsVisible(false); router.push('/resolved-posts'); }}>
+                <Calendar size={18} color={colors.text} />
+                <Text style={{ marginLeft: 10, color: colors.text }}>Resolved Posts</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Account Group */}
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter-Medium', color: colors.textSecondary, marginBottom: 6 }}>Account</Text>
+              <TouchableOpacity style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center' }} onPress={() => { setQuickActionsVisible(false); setChangePasswordModalVisible(true); }}>
+                <Lock size={18} color={colors.text} />
+                <Text style={{ marginLeft: 10, color: colors.text }}>Change Password</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center' }} onPress={() => { setQuickActionsVisible(false); setDeactivateModalVisible(true); }}>
+                <Shield size={18} color={colors.error} />
+                <Text style={{ marginLeft: 10, color: colors.error }}>Deactivate Account</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Support Group */}
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter-Medium', color: colors.textSecondary, marginBottom: 6 }}>Support</Text>
+              <TouchableOpacity style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center' }} onPress={() => { setQuickActionsVisible(false); router.push('/feedback'); }}>
+                <MessageSquare size={18} color={colors.text} />
+                <Text style={{ marginLeft: 10, color: colors.text }}>Send Feedback</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={{ marginTop: 8, paddingVertical: 12, borderRadius: 8, backgroundColor: colors.border, alignItems: 'center' }}
+              onPress={() => setQuickActionsVisible(false)}
+            >
+              <Text style={{ color: colors.text, fontFamily: 'Inter-SemiBold' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       {/* Deactivate Account Modal */}
