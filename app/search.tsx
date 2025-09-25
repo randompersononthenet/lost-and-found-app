@@ -472,12 +472,6 @@ export default function SearchScreen() {
             onSubmitEditing={performSearch}
             returnKeyType="search"
           />
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={performSearch}
-          >
-            <Text style={[styles.searchButtonText, { color: colors.primary }]}>Search</Text>
-          </TouchableOpacity>
         </View>
 
         <FlatList
