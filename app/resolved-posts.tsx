@@ -265,15 +265,6 @@ export default function ResolvedPostsScreen() {
                       {item.status === 'resolved' ? 'Resolved' : 'Claimed'}
                     </Text>
                   </View>
-                  
-                  <View style={[
-                    styles.categoryBadge,
-                    { backgroundColor: item.category === 'lost' ? colors.error : colors.success }
-                  ]}>
-                    <Text style={[styles.categoryText, { color: colors.card }]}>
-                      {item.category.toUpperCase()}
-                    </Text>
-                  </View>
                 </View>
               </View>
 
