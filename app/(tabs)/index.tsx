@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Image, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Image, Modal, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Heart, MessageCircle, Share, MapPin, Calendar, X, Edit, Trash2, Search, MoreVertical } from 'lucide-react-native';
+import { Heart, MessageCircle, Share as ShareIcon, MapPin, Calendar, X, Edit, Trash2, Search, MoreVertical } from 'lucide-react-native';
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
@@ -287,6 +288,33 @@ export default function FeedScreen() {
         type: 'error',
         text1: 'Error',
         text2: 'Failed to mark post as resolved. Please try again.',
+      });
+    }
+  };
+
+  const sharePost = async (post: Post) => {
+    try {
+      const deepLink = Linking.createURL('/comments', { queryParams: { postId: post.id } });
+      const messageParts = [
+        `${post.title}`,
+        post.description ? `\n${post.description}` : '',
+        post.location ? `\nLocation: ${post.location}` : '',
+        post.date_lost_found ? `\nDate: ${new Date(post.date_lost_found).toLocaleDateString()}` : '',
+        `\n\nOpen in app: ${deepLink}`,
+      ];
+      const message = messageParts.filter(Boolean).join('');
+
+      await Share.share({
+        message: message || 'Check out this Lost & Found post!',
+        title: 'Lost & Found',
+        url: deepLink,
+      });
+    } catch (error) {
+      console.error('Error sharing post:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Share Failed',
+        text2: 'Unable to open share sheet.',
       });
     }
   };
@@ -582,8 +610,8 @@ export default function FeedScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton}>
-          <Share size={20} color={colors.textSecondary} />
+        <TouchableOpacity style={styles.actionButton} onPress={() => sharePost(item)}>
+          <ShareIcon size={20} color={colors.textSecondary} />
           <Text style={[styles.actionText, { color: colors.textSecondary }]}>
             Share
           </Text>
