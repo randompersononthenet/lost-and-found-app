@@ -506,18 +506,33 @@ export default function SearchScreen() {
         />
       </View>
 
-      {/* Item Category Filter */}
-      <View style={styles.itemCategoryContainer}>
-        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Item Type:</Text>
-        <TouchableOpacity
-          style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => setItemCategoryModalVisible(true)}
-        >
-          <Text style={[styles.dropdownText, { color: colors.text }]}>
-            {getItemCategoryLabel(selectedItemCategory)}
-          </Text>
-          <ChevronDown size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+      {/* Filters Row: Item Category + Status */}
+      <View style={[styles.filtersRow, { borderBottomColor: colors.border }]}>
+        <View style={styles.filterColumn}>
+          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Item Type:</Text>
+          <TouchableOpacity
+            style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => setItemCategoryModalVisible(true)}
+          >
+            <Text style={[styles.dropdownText, { color: colors.text }]} numberOfLines={1}>
+              {getItemCategoryLabel(selectedItemCategory)}
+            </Text>
+            <ChevronDown size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.filterColumn}>
+          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Status:</Text>
+          <TouchableOpacity
+            style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => setStatusModalVisible(true)}
+          >
+            <Text style={[styles.dropdownText, { color: colors.text }]} numberOfLines={1}>
+              {statusOptions.find(opt => opt.key === selectedStatus)?.label || 'All Status'}
+            </Text>
+            <ChevronDown size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Item Category Modal */}
@@ -562,20 +577,6 @@ export default function SearchScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-
-      {/* Status Filter */}
-      <View style={styles.statusFilterContainer}>
-        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Status:</Text>
-        <TouchableOpacity
-          style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => setStatusModalVisible(true)}
-        >
-          <Text style={[styles.dropdownText, { color: colors.text }]}>
-            {statusOptions.find(opt => opt.key === selectedStatus)?.label || 'All Status'}
-          </Text>
-          <ChevronDown size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
 
       {/* Status Filter Modal */}
       <Modal
@@ -1009,5 +1010,44 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  filtersRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+    borderBottomWidth: 1,
+  },
+  filterColumn: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 6,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 0,
+  },
+  dropdownText: {
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginRight: 0,
+    minWidth: 0,
   },
 });
