@@ -46,10 +46,11 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 2. Click "New Project"
 3. Import your GitHub repository
 4. Configure the project:
-   - **Framework Preset**: Vite
-   - **Root Directory**: `admin`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
+   - **Framework Preset**: Other
+   - **Root Directory**: Leave empty (use root)
+   - **Build Command**: `cd admin && npm run build`
+   - **Output Directory**: `admin/dist`
+   - **Install Command**: `cd admin && npm install`
 5. Add environment variables (see step 2)
 6. Click "Deploy"
 
@@ -83,15 +84,9 @@ vercel
 ```json
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "admin/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "admin/dist"
-      }
-    }
-  ],
+  "buildCommand": "cd admin && npm run build",
+  "outputDirectory": "admin/dist",
+  "installCommand": "cd admin && npm install",
   "routes": [
     {
       "src": "/admin/(.*)",
@@ -106,9 +101,9 @@ vercel
 ```
 
 ### Build Configuration
-- **Build Command**: `npm run build`
+- **Build Command**: `cd admin && npm run build`
 - **Output Directory**: `admin/dist`
-- **Install Command**: `npm install` (runs in admin directory)
+- **Install Command**: `cd admin && npm install`
 
 ## 🛠️ Local Testing
 
