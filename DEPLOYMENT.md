@@ -171,7 +171,11 @@ Once connected to Vercel:
 # - Missing environment variables
 # - TypeScript errors
 # - Missing dependencies
+# - Terser minification errors (fixed by using esbuild)
 ```
+
+**Terser Error Fix:**
+If you see "terser not found" error, the build configuration uses `esbuild` for minification instead of `terser` to avoid dependency issues.
 
 ### Runtime Errors
 ```bash
