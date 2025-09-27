@@ -20,7 +20,12 @@ The repository is already configured with:
 
 ### 2. Set Up Environment Variables
 
-In your Vercel dashboard, add these environment variables:
+**IMPORTANT**: Environment variables are set in the Vercel dashboard, NOT in the `vercel.json` file.
+
+In your Vercel dashboard:
+1. Go to your project settings
+2. Navigate to "Environment Variables"
+3. Add these variables:
 
 ```bash
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -31,6 +36,8 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 1. Go to your Supabase project dashboard
 2. Navigate to Settings → API
 3. Copy the Project URL and anon/public key
+
+**Note**: Make sure to add these variables for all environments (Production, Preview, Development).
 
 ### 3. Deploy to Vercel
 
