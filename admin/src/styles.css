@@ -2,13 +2,8 @@
 
 *{box-sizing:border-box}
 body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;color:var(--text);background:var(--background)}
-.topbar{position:sticky;top:0;display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--border);backdrop-filter:saturate(180%) blur(8px);box-shadow:0 2px 10px rgba(2,6,23,0.04)}
-.topbar nav{display:flex;gap:10px}
-.topbar a{color:var(--text);opacity:.85;text-decoration:none;padding:8px 12px;border-radius:8px;transition:background .15s ease,opacity .15s ease}
-.topbar a:hover{opacity:1;background:color-mix(in srgb, var(--surface) 60%, transparent)}
-.topbar a.active{background:color-mix(in srgb, var(--primary) 14%, transparent);color:var(--primary);opacity:1}
-.topbar .spacer{flex:1}
-.container{max-width:1200px;margin:0 auto;padding:20px}
+/* Removed old topbar styles - now using sidebar layout */
+/* Removed container styles - now handled by content wrapper */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(2,6,23,0.06)}
 .table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
@@ -42,3 +37,39 @@ input:focus,select:focus{outline:none;border-color:color-mix(in srgb, var(--prim
 .badge.success{background:color-mix(in srgb, var(--success) 12%, #fff);border-color:color-mix(in srgb, var(--success) 40%, #fff);color:var(--success)}
 .badge.warning{background:color-mix(in srgb, var(--warning) 12%, #fff);border-color:color-mix(in srgb, var(--warning) 40%, #fff);color:var(--warning)}
 .badge.error{background:color-mix(in srgb, var(--error) 12%, #fff);border-color:color-mix(in srgb, var(--error) 40%, #fff);color:var(--error)}
+
+/* Admin Layout */
+.admin-layout{display:flex;min-height:100vh;background:var(--background)}
+.sidebar{width:260px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:width 0.3s ease;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar.collapsed{width:64px}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;min-height:64px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-text{font-size:18px;font-weight:700;color:var(--text)}
+.collapse-btn{background:none;border:none;padding:8px;border-radius:6px;cursor:pointer;color:var(--text-secondary);transition:background 0.15s ease}
+.collapse-btn:hover{background:var(--surface)}
+.sidebar-nav{flex:1;padding:8px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:8px;text-decoration:none;color:var(--text-secondary);transition:all 0.15s ease;margin-bottom:4px;border:none;background:none;width:100%;cursor:pointer;font-size:14px}
+.nav-item:hover{background:var(--surface);color:var(--text)}
+.nav-item.active{background:color-mix(in srgb, var(--primary) 12%, transparent);color:var(--primary)}
+.nav-item.active:hover{background:color-mix(in srgb, var(--primary) 16%, transparent)}
+.sidebar.collapsed .nav-item{justify-content:center;padding:12px}
+.sidebar.collapsed .nav-item span{display:none}
+.sidebar-footer{padding:16px;border-top:1px solid var(--border)}
+.sidebar-footer .nav-item{margin-bottom:8px}
+.sidebar-footer .nav-item:last-child{margin-bottom:0}
+.theme-toggle{color:var(--text-secondary)}
+.sign-out{color:var(--error)}
+.sign-out:hover{background:color-mix(in srgb, var(--error) 10%, transparent);color:var(--error)}
+.main-content{flex:1;display:flex;flex-direction:column;min-width:0}
+.maintenance-banner{background:var(--warning);color:#111;padding:8px 20px;text-align:center;font-size:14px}
+.content{padding:20px;flex:1}
+.page-header{margin-bottom:24px}
+.page-header h1{font-size:28px;font-weight:700;color:var(--text);margin:0}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar{position:fixed;top:0;left:0;z-index:1000;transform:translateX(-100%);transition:transform 0.3s ease}
+  .sidebar.open{transform:translateX(0)}
+  .main-content{margin-left:0}
+  .content{padding:16px}
+}
