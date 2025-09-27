@@ -24,7 +24,20 @@ export default function Login() {
 	return (
 		<div className="centered">
 			<form className="card" onSubmit={handleLogin}>
-				<h1>Admin Login</h1>
+				<div style={{ textAlign: 'center', marginBottom: '24px' }}>
+					<img 
+						src="/assets/images/icon.png" 
+						alt="RECALL Logo" 
+						style={{ 
+							width: '64px', 
+							height: '64px', 
+							marginBottom: '16px',
+							borderRadius: '12px'
+						}} 
+					/>
+					<h1 style={{ margin: '0 0 8px 0', fontSize: '28px', fontWeight: '700', color: 'var(--text)' }}>RECALL</h1>
+					<p style={{ margin: '0', color: 'var(--text-secondary)', fontSize: '14px' }}>Lost & Found Admin Panel</p>
+				</div>
 				<label>Email</label>
 				<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
 				<label>Password</label>

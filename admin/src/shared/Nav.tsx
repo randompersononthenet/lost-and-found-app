@@ -24,7 +24,7 @@ export default function Nav({ title, children }: { title: string, children: Reac
 					{isDark ? <Sun size={16} /> : <Moon size={16} />}
 					{isDark ? 'Light' : 'Dark'}
 				</button>
-				<button onClick={() => supabase.auth.signOut()}>Sign Out</button>
+				<button className="primary" onClick={() => supabase.auth.signOut()}>Sign Out</button>
 			</header>
 			{settings?.maintenance_mode && (
 				<div style={{ background: 'var(--warning)', color: '#111', padding: 8, textAlign: 'center' }}>
