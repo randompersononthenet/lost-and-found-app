@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import Nav from '../shared/Nav'
 import { useSession, supabase } from '../supabase'
+import { Users as UsersIcon, Shield, UserCheck, UserX, Crown, User as UserIcon, Calendar, FileText } from 'lucide-react'
 
 type Role = 'user'|'moderator'|'admin'
-interface Profile { id: string; full_name: string|null; email?: string; role: Role; disabled: boolean }
+interface Profile { 
+	id: string; 
+	full_name: string|null; 
+	email?: string; 
+	role: Role; 
+	disabled: boolean;
+	created_at?: string;
+}
 
 export default function Users() {
 	const { role } = useSession()
@@ -12,7 +20,7 @@ export default function Users() {
 
 	async function load() {
 		setLoading(true)
-		const { data } = await supabase.from('profiles').select('id, full_name, role, disabled')
+		const { data } = await supabase.from('profiles').select('id, full_name, role, disabled, created_at').order('created_at', { ascending: false })
 		setUsers((data as any) || [])
 		setLoading(false)
 	}
@@ -27,46 +35,128 @@ export default function Users() {
 		load()
 	}
 
+	function getRoleBadge(role: Role) {
+		const roleConfig = {
+			admin: { class: 'badge error', text: 'Admin', icon: Crown },
+			moderator: { class: 'badge warning', text: 'Moderator', icon: Shield },
+			user: { class: 'badge', text: 'User', icon: UserIcon }
+		}
+		const config = roleConfig[role] || { class: 'badge', text: role, icon: UserIcon }
+		const IconComponent = config.icon
+		return (
+			<span className={config.class}>
+				<IconComponent size={12} />
+				<span>{config.text}</span>
+			</span>
+		)
+	}
+
+	function getStatusBadge(disabled: boolean) {
+		if (disabled) {
+			return <span className="badge error"><UserX size={12} /><span>Disabled</span></span>
+		}
+		return <span className="badge success"><UserCheck size={12} /><span>Active</span></span>
+	}
+
+	function formatDate(dateString: string) {
+		if (!dateString) return 'Unknown'
+		return new Date(dateString).toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric'
+		})
+	}
+
 	if (role !== 'admin') return <Nav title="Users">Only admins can manage users.</Nav>
 
 	return (
 		<Nav title="Users">
-			<table className="table">
-				<thead>
-					<tr>
-						<th>User</th>
-						<th>Role</th>
-						<th>Status</th>
-						<th>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{loading ? (
-						<tr><td colSpan={4}>Loading...</td></tr>
-					) : users.length === 0 ? (
-						<tr><td colSpan={4}>No users found.</td></tr>
-					) : users.map(u => (
-						<tr key={u.id}>
-							<td className="mono">{u.id}</td>
-							<td>
-								<select value={u.role} onChange={(e) => setRole(u.id, e.target.value as Role)}>
-									<option value="user">user</option>
-									<option value="moderator">moderator</option>
-									<option value="admin">admin</option>
-								</select>
-							</td>
-							<td>{u.disabled ? 'disabled' : 'active'}</td>
-							<td className="actions">
-								{u.disabled ? (
-									<button onClick={() => setDisabled(u.id, false)}>Reactivate</button>
-								) : (
-									<button className="danger" onClick={() => setDisabled(u.id, true)}>Deactivate</button>
-								)}
-							</td>
-						</tr>
-					))}
-				</tbody>
-			</table>
+			<div className="users-container">
+				{loading ? (
+					<div className="loading-state">
+						<div className="loading-spinner"></div>
+						<p>Loading users...</p>
+					</div>
+				) : users.length === 0 ? (
+					<div className="empty-state">
+						<UsersIcon size={48} color="var(--text-secondary)" />
+						<h3>No users found</h3>
+						<p>There are no users to display at the moment.</p>
+					</div>
+				) : (
+					<div className="users-grid">
+						{users.map(user => (
+							<div key={user.id} className="user-card">
+								<div className="user-header">
+									<div className="user-info">
+										<div className="user-avatar">
+											<UserIcon size={20} />
+										</div>
+										<div className="user-details">
+											<h3 className="user-name">{user.full_name || 'Unnamed User'}</h3>
+											<div className="user-meta">
+												<div className="meta-item">
+													<Calendar size={14} />
+													<span>Joined {formatDate(user.created_at || '')}</span>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div className="user-badges">
+										{getRoleBadge(user.role)}
+										{getStatusBadge(user.disabled)}
+									</div>
+								</div>
+
+								<div className="user-details-section">
+									<div className="detail-row">
+										<span className="detail-label">User ID:</span>
+										<span className="detail-value mono">{user.id}</span>
+									</div>
+									{user.email && (
+										<div className="detail-row">
+											<span className="detail-label">Email:</span>
+											<span className="detail-value">{user.email}</span>
+										</div>
+									)}
+								</div>
+
+								<div className="user-actions">
+									<div className="role-selector">
+										<label className="selector-label">Role:</label>
+										<select 
+											value={user.role} 
+											onChange={(e) => setRole(user.id, e.target.value as Role)}
+											className="role-select"
+										>
+											<option value="user">User</option>
+											<option value="moderator">Moderator</option>
+											<option value="admin">Admin</option>
+										</select>
+									</div>
+									{user.disabled ? (
+										<button 
+											className="action-btn success-btn" 
+											onClick={() => setDisabled(user.id, false)}
+										>
+											<UserCheck size={16} />
+											<span>Reactivate</span>
+										</button>
+									) : (
+										<button 
+											className="action-btn danger-btn" 
+											onClick={() => setDisabled(user.id, true)}
+										>
+											<UserX size={16} />
+											<span>Deactivate</span>
+										</button>
+									)}
+								</div>
+							</div>
+						))}
+					</div>
+				)}
+			</div>
 		</Nav>
 	)
 } 

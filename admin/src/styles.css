@@ -100,6 +100,40 @@ input:focus,select:focus{outline:none;border-color:color-mix(in srgb, var(--prim
 .empty-state h3{margin:16px 0 8px 0;color:var(--text);font-size:18px;font-weight:600}
 .empty-state p{margin:0;font-size:14px}
 
+/* Comments Grid Layout */
+.comments-container{max-width:1400px;margin:0 auto}
+.comments-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(450px,1fr));gap:20px;margin-top:20px}
+.comment-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;transition:all 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.comment-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08);transform:translateY(-2px)}
+.comment-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:16px}
+.comment-meta{display:flex;flex-direction:column;gap:4px}
+.comment-badge{display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--primary);color:#fff;border-radius:6px;font-size:12px;font-weight:500}
+.comment-content{margin-bottom:16px;padding:12px;background:var(--surface);border-radius:8px;border-left:3px solid var(--primary)}
+.comment-content p{margin:0;color:var(--text);line-height:1.5;font-size:14px}
+.comment-details{margin-bottom:16px;padding:12px;background:var(--surface);border-radius:8px}
+.comment-actions{display:flex;gap:8px;justify-content:flex-end}
+
+/* Users Grid Layout */
+.users-container{max-width:1400px;margin:0 auto}
+.users-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:20px;margin-top:20px}
+.user-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;transition:all 0.2s ease;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.user-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08);transform:translateY(-2px)}
+.user-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:16px}
+.user-info{display:flex;align-items:flex-start;gap:12px;flex:1;min-width:0}
+.user-avatar{width:40px;height:40px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.user-details{flex:1;min-width:0}
+.user-name{font-size:16px;font-weight:600;color:var(--text);margin:0 0 8px 0;line-height:1.4;word-wrap:break-word}
+.user-badges{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.user-details-section{margin-bottom:16px;padding:12px;background:var(--surface);border-radius:8px}
+.user-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.role-selector{display:flex;align-items:center;gap:8px}
+.selector-label{font-size:13px;color:var(--text-secondary);font-weight:500;white-space:nowrap}
+.role-select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;min-width:100px}
+.role-select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px rgba(var(--primary-rgb),0.1)}
+
+/* Badge with Icons */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
+
 /* Responsive */
 @media (max-width: 768px) {
   .sidebar{position:fixed;top:0;left:0;z-index:1000;transform:translateX(-100%);transition:transform 0.3s ease}
@@ -111,4 +145,14 @@ input:focus,select:focus{outline:none;border-color:color-mix(in srgb, var(--prim
   .post-badges{flex-direction:row;justify-content:flex-start}
   .post-actions{justify-content:stretch}
   .action-btn{flex:1;justify-content:center}
+  .comments-grid{grid-template-columns:1fr;gap:16px}
+  .comment-header{flex-direction:column;align-items:stretch;gap:12px}
+  .comment-badge{align-self:flex-start}
+  .comment-actions{justify-content:stretch}
+  .users-grid{grid-template-columns:1fr;gap:16px}
+  .user-header{flex-direction:column;align-items:stretch;gap:12px}
+  .user-badges{flex-direction:row;justify-content:flex-start}
+  .user-actions{flex-direction:column;align-items:stretch}
+  .role-selector{justify-content:space-between}
+  .role-select{flex:1}
 }
