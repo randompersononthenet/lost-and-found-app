@@ -125,12 +125,13 @@ npm run dev
 # Build for production
 npm run build
 
-# Preview the build
+# Preview the build (access at http://localhost:5174/admin/)
 npm run preview
 ```
 
 ### Local Development Notes
 - **Development server**: Runs on `http://localhost:5174` with base path `/`
+- **Preview server**: Runs on `http://localhost:5174/admin/` with base path `/admin/`
 - **Production build**: Uses base path `/admin/` for Vercel deployment
 - **Routing**: The app automatically redirects `/admin/` to `/` in development mode
 
@@ -191,6 +192,13 @@ If you see "Could not read package.json: Error: ENOENT: no such file or director
 - Check that `vercel.json` uses the correct build command: `cd admin && npm install && npm run build`
 - Remove any `.vercelignore` file that might be excluding the admin directory
 - Verify the admin directory structure is correct
+
+**Preview Server Shows Blank Page:**
+If `npm run preview` shows a blank page:
+- Access the preview at `http://localhost:5174/admin/` (not just `http://localhost:5174`)
+- The preview server uses the same base path as production (`/admin/`)
+- Check browser console for any JavaScript errors
+- Verify that assets are loading correctly by checking Network tab
 
 ### Runtime Errors
 ```bash
