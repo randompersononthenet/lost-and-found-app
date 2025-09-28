@@ -120,12 +120,20 @@ npm install
 cp .env.example .env
 # Edit .env with your actual values
 
+# Test development server (runs on http://localhost:5174)
+npm run dev
+
 # Build for production
 npm run build
 
 # Preview the build
 npm run preview
 ```
+
+### Local Development Notes
+- **Development server**: Runs on `http://localhost:5174` with base path `/`
+- **Production build**: Uses base path `/admin/` for Vercel deployment
+- **Routing**: The app automatically redirects `/admin/` to `/` in development mode
 
 ## 🔐 Security Considerations
 
@@ -171,6 +179,12 @@ Once connected to Vercel:
 
 **Terser Error Fix:**
 If you see "terser not found" error, the build configuration uses `esbuild` for minification instead of `terser` to avoid dependency issues.
+
+**Local Development Routing:**
+If you see "No routes matched location '/admin/'" when running locally, this is normal. The app uses conditional base paths:
+- Development: base path `/` (access at `http://localhost:5174`)
+- Production: base path `/admin/` (for Vercel deployment)
+- Routes automatically redirect `/admin/` to `/` in development mode
 
 ### Runtime Errors
 ```bash

@@ -23,6 +23,8 @@ function ProtectedRoute({ children, requireAdmin = false }: { children: React.Re
 const router = createBrowserRouter([
 	{ path: '/login', element: <Login /> },
 	{ path: '/', element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
+	{ path: '/admin', element: <Navigate to="/" replace /> },
+	{ path: '/admin/', element: <Navigate to="/" replace /> },
 	{ path: '/posts', element: <ProtectedRoute><Posts /></ProtectedRoute> },
 	{ path: '/posts/:id', element: <ProtectedRoute><PostDetails /></ProtectedRoute> },
 	{ path: '/comments', element: <ProtectedRoute><Comments /></ProtectedRoute> },
