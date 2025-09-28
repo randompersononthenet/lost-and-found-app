@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 5174",
+    "preview": "vite preview --port 5174 --base /admin/",
     "vercel-build": "vite build"
   },
   "dependencies": {
