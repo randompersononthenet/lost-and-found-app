@@ -1,7 +1,4 @@
-# Ignore root tsconfig.json to prevent conflicts with admin build
-tsconfig.json
-
-# Ignore mobile app files
+# Ignore mobile app files but keep admin directory
 app/
 assets/
 components/
@@ -11,11 +8,10 @@ lib/
 supabase/
 *.sql
 *.md
-package.json
-package-lock.json
 app.json
 eas.json
 logo.png
 
-# Keep only admin directory for build
+# Keep admin directory and its contents
 !admin/
+!admin/**

@@ -1,8 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "cd admin && npm run build",
+  "buildCommand": "cd admin && npm install && npm run build",
   "outputDirectory": "admin/dist",
-  "installCommand": "cd admin && npm install",
   "routes": [
     {
       "src": "/admin/(.*)",
