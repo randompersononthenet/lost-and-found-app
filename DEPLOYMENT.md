@@ -48,9 +48,9 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 4. Configure the project:
    - **Framework Preset**: Other
    - **Root Directory**: Leave empty (use root)
-   - **Build Command**: `cd admin && npm run build`
+   - **Build Command**: `cd admin && npm install && npm run build`
    - **Output Directory**: `admin/dist`
-   - **Install Command**: `cd admin && npm install`
+   - **Install Command**: Leave empty (combined with build command)
 5. Add environment variables (see step 2)
 6. Click "Deploy"
 
@@ -84,9 +84,8 @@ vercel
 ```json
 {
   "version": 2,
-  "buildCommand": "cd admin && npm run build",
+  "buildCommand": "cd admin && npm install && npm run build",
   "outputDirectory": "admin/dist",
-  "installCommand": "cd admin && npm install",
   "routes": [
     {
       "src": "/admin/(.*)",
@@ -101,9 +100,9 @@ vercel
 ```
 
 ### Build Configuration
-- **Build Command**: `cd admin && npm run build`
+- **Build Command**: `cd admin && npm install && npm run build`
 - **Output Directory**: `admin/dist`
-- **Install Command**: `cd admin && npm install`
+- **Install Command**: Combined with build command
 
 ## 🛠️ Local Testing
 
@@ -185,6 +184,13 @@ If you see "No routes matched location '/admin/'" when running locally, this is 
 - Development: base path `/` (access at `http://localhost:5174`)
 - Production: base path `/admin/` (for Vercel deployment)
 - Routes automatically redirect `/admin/` to `/` in development mode
+
+**Package.json Not Found Error:**
+If you see "Could not read package.json: Error: ENOENT: no such file or directory, open '/vercel/path0/admin/package.json'":
+- Ensure the `admin` directory is included in your repository
+- Check that `vercel.json` uses the correct build command: `cd admin && npm install && npm run build`
+- Remove any `.vercelignore` file that might be excluding the admin directory
+- Verify the admin directory structure is correct
 
 ### Runtime Errors
 ```bash
