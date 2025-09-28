@@ -17,5 +17,5 @@ export default defineConfig(({ command, mode }) => ({
 		sourcemap: false,
 		minify: 'esbuild'
 	},
-	base: command === 'build' ? '/admin/' : '/'
+	base: command === 'build' && mode !== 'vercel' ? '/admin/' : '/'
 })) 

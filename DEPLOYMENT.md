@@ -48,7 +48,7 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 4. Configure the project:
    - **Framework Preset**: Other
    - **Root Directory**: Leave empty (use root)
-   - **Build Command**: `cd admin && npm install && npm run build`
+   - **Build Command**: `cd admin && npm install && npm run vercel-build`
    - **Output Directory**: `admin/dist`
    - **Install Command**: Leave empty (combined with build command)
 5. Add environment variables (see step 2)
@@ -84,7 +84,7 @@ vercel
 ```json
 {
   "version": 2,
-  "buildCommand": "cd admin && npm install && npm run build",
+  "buildCommand": "cd admin && npm install && npm run vercel-build",
   "outputDirectory": "admin/dist",
   "routes": [
     {
@@ -100,9 +100,10 @@ vercel
 ```
 
 ### Build Configuration
-- **Build Command**: `cd admin && npm install && npm run build`
+- **Build Command**: `cd admin && npm install && npm run vercel-build`
 - **Output Directory**: `admin/dist`
-- **Install Command**: Combined with build command
+- **Vercel Build**: Uses `--mode vercel` to build with root asset paths
+- **Local Build**: Uses `/admin/` base path for preview testing
 
 ## 🛠️ Local Testing
 
@@ -189,7 +190,7 @@ If you see "No routes matched location '/admin/'" when running locally, this is 
 **Package.json Not Found Error:**
 If you see "Could not read package.json: Error: ENOENT: no such file or directory, open '/vercel/path0/admin/package.json'":
 - Ensure the `admin` directory is included in your repository
-- Check that `vercel.json` uses the correct build command: `cd admin && npm install && npm run build`
+- Check that `vercel.json` uses the correct build command: `cd admin && npm install && npm run vercel-build`
 - Remove any `.vercelignore` file that might be excluding the admin directory
 - Verify the admin directory structure is correct
 
@@ -199,6 +200,13 @@ If `npm run preview` shows a blank page:
 - The preview server uses the same base path as production (`/admin/`)
 - Check browser console for any JavaScript errors
 - Verify that assets are loading correctly by checking Network tab
+
+**Vercel Deployment Shows Blank Page:**
+If your Vercel deployment shows a blank page:
+- Ensure you're using `npm run vercel-build` (not `npm run build`) in the build command
+- The vercel-build script uses `--mode vercel` to build with root asset paths
+- Check that assets are loading by inspecting the deployed HTML source
+- Verify that the routing configuration in `vercel.json` is correct
 
 ### Runtime Errors
 ```bash
