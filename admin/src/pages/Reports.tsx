@@ -17,12 +17,9 @@ interface Report {
   created_at: string
   reviewed_at?: string
   resolved_at?: string
-  profiles_reporter: {
+  reporter_profile?: {
     full_name: string
     email: string
-  }
-  profiles_admin?: {
-    full_name: string
   }
   posts: {
     id: string
@@ -58,12 +55,12 @@ export default function Reports() {
   const loadReports = async () => {
     try {
       setLoading(true)
+      
+      // First, get all reports
       let query = supabase
         .from('reports')
         .select(`
           *,
-          profiles_reporter:profiles!reports_reporter_id_fkey(full_name, email),
-          profiles_admin:profiles!reports_admin_id_fkey(full_name),
           posts:posts!reports_post_id_fkey(
             id,
             title,
@@ -80,14 +77,33 @@ export default function Reports() {
         query = query.eq('status', filterStatus)
       }
 
-      const { data, error } = await query
+      const { data: reportsData, error } = await query
 
       if (error) {
         console.error('Error loading reports:', error)
         return
       }
 
-      setReports(data || [])
+      console.log('Raw reports data:', reportsData)
+
+      // Get reporter information for each report
+      const reportsWithReporterInfo = await Promise.all(
+        (reportsData || []).map(async (report) => {
+          const { data: reporterProfile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', report.reporter_id)
+            .single()
+
+          return {
+            ...report,
+            reporter_profile: reporterProfile
+          }
+        })
+      )
+
+      console.log('Reports loaded:', reportsWithReporterInfo)
+      setReports(reportsWithReporterInfo)
     } catch (error) {
       console.error('Error loading reports:', error)
     } finally {
@@ -330,7 +346,7 @@ export default function Reports() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', color: colors.textSecondary }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <User size={12} />
-                <span>{report.profiles_reporter.full_name}</span>
+                <span>{report.reporter_profile?.full_name || 'Unknown User'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Calendar size={12} />
@@ -416,7 +432,7 @@ export default function Reports() {
               <div style={{ marginBottom: '8px' }}>
                 <strong style={{ color: colors.text }}>Reporter:</strong>
                 <span style={{ color: colors.textSecondary, marginLeft: '8px' }}>
-                  {selectedReport.profiles_reporter.full_name}
+                  {selectedReport.reporter_profile?.full_name || 'Unknown User'}
                 </span>
               </div>
               {selectedReport.description && (
