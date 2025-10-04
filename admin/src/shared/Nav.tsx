@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useSession, supabase } from '../supabase'
 import { useTheme } from '../theme'
 import { useAppSettings } from '../appSettings'
-import { Moon, Sun, Menu, X, Home, FileText, MessageSquare, Users, Settings, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Moon, Sun, Menu, X, Home, FileText, MessageSquare, Users, Settings, LogOut, ChevronLeft, ChevronRight, Flag } from 'lucide-react'
 
 export default function Nav({ title, children }: { title: string, children: React.ReactNode }) {
 	const { pathname } = useLocation()
@@ -16,6 +16,7 @@ export default function Nav({ title, children }: { title: string, children: Reac
 		{ path: '/posts', label: 'Posts', icon: FileText },
 		{ path: '/comments', label: 'Comments', icon: MessageSquare },
 		{ path: '/users', label: 'Users', icon: Users },
+		{ path: '/reports', label: 'Reports', icon: Flag },
 		{ path: '/settings', label: 'Settings', icon: Settings },
 	]
 

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Image, Modal, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Image, Modal, Alert, Share, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Heart, MessageCircle, Share as ShareIcon, MapPin, Calendar, X, Edit, Trash2, Search, MoreVertical } from 'lucide-react-native';
+import { Heart, MessageCircle, Share as ShareIcon, MapPin, Calendar, X, Edit, Trash2, Search, MoreVertical, Flag } from 'lucide-react-native';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
@@ -42,6 +42,10 @@ export default function FeedScreen() {
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   const [loadingUserProfile, setLoadingUserProfile] = useState(false);
   const [kebabMenuVisible, setKebabMenuVisible] = useState<string | null>(null);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [selectedPostForReport, setSelectedPostForReport] = useState<Post | null>(null);
+  const [reportReason, setReportReason] = useState<string>('');
+  const [reportDescription, setReportDescription] = useState<string>('');
 
   useEffect(() => {
     if (!user) {
@@ -305,8 +309,8 @@ export default function FeedScreen() {
       const message = messageParts.filter(Boolean).join('');
 
       await Share.share({
-        message: message || 'Check out this Lost & Found post!',
-        title: 'Lost & Found',
+        message: message || 'Check out this RECALL post!',
+        title: 'RECALL',
         url: deepLink,
       });
     } catch (error) {
@@ -315,6 +319,57 @@ export default function FeedScreen() {
         type: 'error',
         text1: 'Share Failed',
         text2: 'Unable to open share sheet.',
+      });
+    }
+  };
+
+  const handleReportPost = (post: Post) => {
+    setSelectedPostForReport(post);
+    setReportModalVisible(true);
+    setReportReason('');
+    setReportDescription('');
+  };
+
+  const submitReport = async () => {
+    if (!selectedPostForReport || !reportReason) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Information',
+        text2: 'Please select a reason for reporting',
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('reports')
+        .insert({
+          reporter_id: user?.id,
+          post_id: selectedPostForReport.id,
+          reason: reportReason,
+          description: reportDescription || null,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: 'Report Submitted',
+        text2: 'Thank you for helping keep our community safe',
+      });
+
+      setReportModalVisible(false);
+      setSelectedPostForReport(null);
+      setReportReason('');
+      setReportDescription('');
+    } catch (error: any) {
+      console.error('Error submitting report:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Report Failed',
+        text2: error.message || 'Unable to submit report',
       });
     }
   };
@@ -616,6 +671,19 @@ export default function FeedScreen() {
             Share
           </Text>
         </TouchableOpacity>
+
+        {/* Report Button - only show for posts not by current user */}
+        {item.user_id !== user?.id && (
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => handleReportPost(item)}
+          >
+            <Flag size={20} color={colors.textSecondary} />
+            <Text style={[styles.actionText, { color: colors.textSecondary }]}>
+              Report
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -627,7 +695,7 @@ export default function FeedScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Lost & Found</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>RECALL</Text>
         <TouchableOpacity
           style={styles.searchButton}
           onPress={() => router.push('/search')}
@@ -685,6 +753,115 @@ export default function FeedScreen() {
         userProfile={selectedUserProfile}
         onMessagePress={() => selectedUserProfile && handleMessageUser(selectedUserProfile)}
       />
+
+      {/* Report Modal */}
+      <Modal
+        visible={reportModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setReportModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.reportModal, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.reportModalHeader}>
+              <Text style={[styles.reportModalTitle, { color: colors.text }]}>Report Post</Text>
+              <TouchableOpacity
+                onPress={() => setReportModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedPostForReport && (
+              <View style={styles.reportPostPreview}>
+                <Text style={[styles.reportPostTitle, { color: colors.text }]}>
+                  {selectedPostForReport.title}
+                </Text>
+                <Text style={[styles.reportPostAuthor, { color: colors.textSecondary }]}>
+                  by {selectedPostForReport.profiles.full_name}
+                </Text>
+              </View>
+            )}
+
+            <Text style={[styles.reportLabel, { color: colors.text }]}>Reason for reporting:</Text>
+            
+            <View style={styles.reportReasons}>
+              {[
+                { value: 'spam', label: 'Spam' },
+                { value: 'inappropriate_content', label: 'Inappropriate Content' },
+                { value: 'harassment', label: 'Harassment' },
+                { value: 'fake_post', label: 'Fake Post' },
+                { value: 'wrong_category', label: 'Wrong Category' },
+                { value: 'duplicate', label: 'Duplicate Post' },
+                { value: 'other', label: 'Other' },
+              ].map((reason) => (
+                <TouchableOpacity
+                  key={reason.value}
+                  style={[
+                    styles.reportReasonOption,
+                    { 
+                      backgroundColor: reportReason === reason.value ? colors.primary : colors.card,
+                      borderColor: colors.border 
+                    }
+                  ]}
+                  onPress={() => setReportReason(reason.value)}
+                >
+                  <Text style={[
+                    styles.reportReasonText,
+                    { color: reportReason === reason.value ? colors.card : colors.text }
+                  ]}>
+                    {reason.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.reportLabel, { color: colors.text }]}>Additional details (optional):</Text>
+            <TextInput
+              style={[
+                styles.reportDescriptionInput,
+                { 
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.text 
+                }
+              ]}
+              placeholder="Provide more details about why you're reporting this post..."
+              placeholderTextColor={colors.textSecondary}
+              value={reportDescription}
+              onChangeText={setReportDescription}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+
+            <View style={styles.reportModalActions}>
+              <TouchableOpacity
+                style={[styles.reportCancelButton, { borderColor: colors.border }]}
+                onPress={() => setReportModalVisible(false)}
+              >
+                <Text style={[styles.reportCancelText, { color: colors.textSecondary }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.reportSubmitButton,
+                  { backgroundColor: reportReason ? colors.error : colors.textSecondary }
+                ]}
+                onPress={submitReport}
+                disabled={!reportReason}
+              >
+                <Text style={[styles.reportSubmitText, { color: colors.card }]}>
+                  Submit Report
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -991,5 +1168,93 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'transparent',
     zIndex: 999,
+  },
+  // Report Modal styles
+  reportModal: {
+    width: '90%',
+    maxHeight: '80%',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+  },
+  reportModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  reportModalTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+  },
+  reportPostPreview: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    marginBottom: 20,
+  },
+  reportPostTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 4,
+  },
+  reportPostAuthor: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+  },
+  reportLabel: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 12,
+  },
+  reportReasons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  reportReasonOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  reportReasonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+  },
+  reportDescriptionInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    marginBottom: 20,
+    minHeight: 80,
+  },
+  reportModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  reportCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  reportCancelText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
+  reportSubmitButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  reportSubmitText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
   },
 });
