@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSession, supabase } from '../supabase'
 import { useTheme } from '../theme'
+import Nav from '../shared/Nav'
 import { Flag, Eye, CheckCircle, XCircle, Clock, User, FileText, Calendar, AlertTriangle, MessageSquare } from 'lucide-react'
 
 interface Report {
@@ -201,25 +202,30 @@ export default function Reports() {
 
   if (role !== 'admin') {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <AlertTriangle size={48} color={colors.error} style={{ marginBottom: '16px' }} />
-        <h2 style={{ color: colors.error, marginBottom: '8px' }}>Access Denied</h2>
-        <p style={{ color: colors.textSecondary }}>You need admin privileges to view reports.</p>
-      </div>
+      <Nav title="Reports">
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <AlertTriangle size={48} color={colors.error} style={{ marginBottom: '16px' }} />
+          <h2 style={{ color: colors.error, marginBottom: '8px' }}>Access Denied</h2>
+          <p style={{ color: colors.textSecondary }}>You need admin privileges to view reports.</p>
+        </div>
+      </Nav>
     )
   }
 
   if (loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div className="loading-spinner" />
-        <p style={{ color: colors.textSecondary, marginTop: '16px' }}>Loading reports...</p>
-      </div>
+      <Nav title="Reports">
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <div className="loading-spinner" />
+          <p style={{ color: colors.textSecondary, marginTop: '16px' }}>Loading reports...</p>
+        </div>
+      </Nav>
     )
   }
 
   return (
-    <div style={{ padding: '20px' }}>
+    <Nav title="Reports">
+      <div style={{ padding: '20px' }}>
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ color: colors.text, marginBottom: '8px' }}>Reports Management</h1>
         <p style={{ color: colors.textSecondary }}>Review and manage reported posts</p>
@@ -507,6 +513,7 @@ export default function Reports() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </Nav>
   )
 }
