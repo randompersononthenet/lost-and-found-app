@@ -1,24 +1,26 @@
 import React, { useEffect, useState } from 'react'
 import { useSession, supabase } from '../supabase'
 import Nav from '../shared/Nav'
-import { BarChart3, Users, MessageSquare, FileText, CheckCircle, Clock, TrendingUp, Activity } from 'lucide-react'
+import { BarChart3, Users, MessageSquare, FileText, CheckCircle, Clock, TrendingUp, Activity, Flag } from 'lucide-react'
 
 export default function Dashboard() {
 	const { session } = useSession()
-	const [stats, setStats] = useState({ posts: 0, users: 0, comments: 0, active: 0, resolved: 0 })
+	const [stats, setStats] = useState({ posts: 0, users: 0, comments: 0, active: 0, resolved: 0, reports: 0, pendingReports: 0 })
 	const [loading, setLoading] = useState(true)
 
 	useEffect(() => {
 		async function load() {
 			setLoading(true)
-			const [{ count: posts }, { count: users }, { count: comments }, activeRes, resolvedRes] = await Promise.all([
+			const [{ count: posts }, { count: users }, { count: comments }, activeRes, resolvedRes, { count: reports }, { count: pendingReports }] = await Promise.all([
 				supabase.from('posts').select('*', { count: 'exact', head: true }),
 				supabase.from('profiles').select('*', { count: 'exact', head: true }),
 				supabase.from('comments').select('*', { count: 'exact', head: true }),
 				supabase.from('posts').select('*', { count: 'exact', head: true }).eq('status', 'active'),
 				supabase.from('posts').select('*', { count: 'exact', head: true }).eq('status', 'resolved'),
+				supabase.from('reports').select('*', { count: 'exact', head: true }),
+				supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
 			])
-			setStats({ posts: posts || 0, users: users || 0, comments: comments || 0, active: activeRes?.count || 0, resolved: resolvedRes?.count || 0 })
+			setStats({ posts: posts || 0, users: users || 0, comments: comments || 0, active: activeRes?.count || 0, resolved: resolvedRes?.count || 0, reports: reports || 0, pendingReports: pendingReports || 0 })
 			setLoading(false)
 		}
 		load()
@@ -59,6 +61,20 @@ export default function Dashboard() {
 			icon: MessageSquare,
 			color: 'var(--primary)',
 			description: 'Total comments made'
+		},
+		{
+			title: 'Total Reports',
+			value: stats.reports,
+			icon: Flag,
+			color: 'var(--error)',
+			description: 'All submitted reports'
+		},
+		{
+			title: 'Pending Reports',
+			value: stats.pendingReports,
+			icon: Clock,
+			color: 'var(--warning)',
+			description: 'Reports awaiting review'
 		}
 	]
 

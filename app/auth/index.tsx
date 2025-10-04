@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, User, Eye, EyeOff } from 'lucide-react-native';
+import { User, Eye, EyeOff } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
@@ -107,12 +107,16 @@ export default function AuthScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
-              <Search size={32} color={colors.card} />
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('../../assets/images/icon.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>Lost & Found</Text>
+            <Text style={[styles.title, { color: colors.text }]}>RECALL</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Connect with your school community
+              Lost & Found for your school community
             </Text>
           </View>
 
@@ -303,13 +307,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  iconContainer: {
+  logoContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 8,
+  },
+  logo: {
+    width: 60,
+    height: 60,
   },
   title: {
     fontSize: 28,

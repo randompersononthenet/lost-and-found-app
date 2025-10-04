@@ -9,6 +9,7 @@ import Posts from './pages/Posts'
 import PostDetails from './pages/PostDetails'
 import Comments from './pages/Comments'
 import Users from './pages/Users'
+import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import './styles.css'
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
 	{ path: '/posts/:id', element: <ProtectedRoute><PostDetails /></ProtectedRoute> },
 	{ path: '/comments', element: <ProtectedRoute><Comments /></ProtectedRoute> },
 	{ path: '/users', element: <ProtectedRoute requireAdmin><Users /></ProtectedRoute> },
+	{ path: '/reports', element: <ProtectedRoute requireAdmin><Reports /></ProtectedRoute> },
 	{ path: '/settings', element: <ProtectedRoute requireAdmin><Settings /></ProtectedRoute> },
 ])
 
