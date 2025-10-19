@@ -1,5 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "cd .. && npm ci && npm run build:web",
-  "outputDirectory": "../dist"
+  "buildCommand": "cd .. && npm ci && npm run build:web && rm -rf web/dist && mkdir -p web/dist && cp -r dist/* web/dist",
+  "outputDirectory": "dist",
+  "routes": [
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }
