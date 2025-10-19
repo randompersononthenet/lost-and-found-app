@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 import Toast from 'react-native-toast-message';
@@ -41,6 +42,7 @@ interface MessagingContextType {
   messages: Message[];
   loading: boolean;
   sendMessage: (conversationId: string, content: string) => Promise<void>;
+  sendImage: (conversationId: string, localUri: string) => Promise<void>;
   createConversation: (participantIds: string[]) => Promise<string>;
   loadConversations: () => Promise<void>;
   loadMessages: (conversationId: string) => Promise<void>;
@@ -152,6 +154,92 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setLoading(false);
     }
   }, [user]);
+
+  // Send an image message
+  const sendImage = useCallback(async (conversationId: string, localUri: string) => {
+    if (!user || !localUri) return;
+
+    try {
+      // Client-side resize/compress for better UX and smaller uploads
+      const manipulated = await ImageManipulator.manipulateAsync(
+        localUri,
+        [{ resize: { width: 1280 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      // Prepare upload
+      const response = await fetch(manipulated.uri);
+      const blob = await response.blob();
+      const mime = blob.type || 'image/jpeg';
+      if (!mime.startsWith('image/')) {
+        throw new Error('Unsupported file type');
+      }
+      // Basic size guard (e.g., 10MB)
+      if (typeof blob.size === 'number' && blob.size > 10 * 1024 * 1024) {
+        throw new Error('Image is too large after compression');
+      }
+      const fileExt = 'jpg';
+      const fileName = `${Date.now()}.${fileExt}`;
+      const path = `${conversationId}/${fileName}`;
+
+      // Upload to storage bucket 'message-media'
+      const { error: uploadError } = await supabase.storage
+        .from('message-media')
+        .upload(path, blob, {
+          contentType: mime,
+          upsert: false,
+        });
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage.from('message-media').getPublicUrl(path);
+      const publicUrl = urlData?.publicUrl;
+      if (!publicUrl) throw new Error('Failed to resolve uploaded image URL');
+
+      // Insert message
+      const { data: inserted, error: insertError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content: '',
+          message_type: 'image',
+          metadata: { url: publicUrl },
+        })
+        .select()
+        .single();
+      if (insertError) throw insertError;
+
+      // Optimistically add message to UI
+      const newMessage: Message = {
+        ...inserted,
+        sender_profile: {
+          full_name: user.user_metadata?.full_name || 'You',
+          avatar_url: user.user_metadata?.avatar_url,
+        },
+      };
+      setMessages(prev => [...prev, newMessage]);
+
+      // Update conversation preview
+      try {
+        await supabase
+          .from('conversations')
+          .update({
+            last_message_at: inserted.created_at,
+            last_message_content: '[Image]',
+            last_message_sender_id: user.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', conversationId);
+        await loadConversations();
+      } catch (e) {
+        console.error('Error updating conversation after image send:', e);
+      }
+    } catch (error) {
+      console.error('Error sending image:', error);
+      Toast.show({ type: 'error', text1: 'Image Send Failed', text2: 'Could not send image. Please try again.' });
+    }
+  }, [user, loadConversations]);
 
   // Load messages for a conversation
   const loadMessages = useCallback(async (conversationId: string) => {
@@ -409,9 +497,11 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               markConversationAsRead(currentConversation.id);
             }
             // Ensure conversations table reflects latest message for proper sorting and previews
-            const preview = newMessage.content?.trim()?.length > 100
-              ? newMessage.content.trim().substring(0, 100) + '…'
-              : newMessage.content?.trim() || '';
+            const preview = newMessage.message_type === 'image'
+              ? '[Image]'
+              : (newMessage.content?.trim()?.length > 100
+                  ? newMessage.content.trim().substring(0, 100) + '…'
+                  : newMessage.content?.trim() || '');
             void (async () => {
               try {
                 await supabase
@@ -466,6 +556,7 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     messages,
     loading,
     sendMessage,
+    sendImage,
     createConversation,
     loadConversations,
     loadMessages,

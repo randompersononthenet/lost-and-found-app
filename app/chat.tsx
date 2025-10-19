@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Image, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessaging } from '@/contexts/MessagingContext';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Send, Trash2, User, MoreVertical } from 'lucide-react-native';
+import { ArrowLeft, Send, Trash2, User, MoreVertical, ImagePlus } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function ChatScreen() {
   const { colors } = useTheme();
@@ -17,6 +18,7 @@ export default function ChatScreen() {
     messages, 
     currentConversation, 
     sendMessage, 
+    sendImage,
     loadMessages, 
     setCurrentConversation,
     markConversationAsRead,
@@ -25,9 +27,12 @@ export default function ChatScreen() {
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendingImage, setSendingImage] = useState(false);
   const [userProfileModalVisible, setUserProfileModalVisible] = useState(false);
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   const flatListRef = useRef<FlatList>(null);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (conversationId) {
@@ -125,6 +130,34 @@ export default function ChatScreen() {
     }
   };
 
+  const handlePickImage = async () => {
+    if (!conversationId || sendingImage) return;
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Toast.show({ type: 'error', text1: 'Permission Needed', text2: 'Allow photo access to send images.' });
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: false,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const uri = result.assets[0].uri;
+      setSendingImage(true);
+      await sendImage(conversationId, uri);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (e) {
+      console.error('Image pick/send failed:', e);
+      Toast.show({ type: 'error', text1: 'Image Failed', text2: 'Unable to send image.' });
+    } finally {
+      setSendingImage(false);
+    }
+  };
+
   const handleOpenUserProfile = async (userId: string) => {
     if (userId === user?.id) {
       // If it's the current user, navigate to their profile
@@ -192,12 +225,18 @@ export default function ChatScreen() {
           borderColor: colors.border,
         }
       ]}>
-        <Text style={[
-          styles.messageText,
-          { color: isOwnMessage(item) ? colors.card : colors.text }
-        ]}>
-          {item.content}
-        </Text>
+        {item.message_type === 'image' && item.metadata?.url ? (
+          <TouchableOpacity onPress={() => { setImageViewerUrl(item.metadata.url); setImageViewerVisible(true); }}>
+            <Image source={{ uri: item.metadata.url }} style={styles.messageImage} resizeMode="cover" />
+          </TouchableOpacity>
+        ) : (
+          <Text style={[
+            styles.messageText,
+            { color: isOwnMessage(item) ? colors.card : colors.text }
+          ]}>
+            {item.content}
+          </Text>
+        )}
         <View style={styles.messageFooter}>
           <Text style={[
             styles.messageTime,
@@ -316,6 +355,17 @@ export default function ChatScreen() {
         />
 
         <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.attachButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+            onPress={handlePickImage}
+            disabled={sendingImage}
+          >
+            {sendingImage ? (
+              <ActivityIndicator size="small" color={colors.textSecondary} />
+            ) : (
+              <ImagePlus size={20} color={colors.textSecondary} />
+            )}
+          </TouchableOpacity>
           <TextInput
             style={[styles.messageInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
             placeholder="Type a message..."
@@ -329,17 +379,41 @@ export default function ChatScreen() {
             style={[
               styles.sendButton,
               {
-                backgroundColor: newMessage.trim() && !sending ? colors.primary : colors.border,
-                opacity: newMessage.trim() && !sending ? 1 : 0.6,
+                backgroundColor: newMessage.trim() && !sending && !sendingImage ? colors.primary : colors.border,
+                opacity: newMessage.trim() && !sending && !sendingImage ? 1 : 0.6,
               }
             ]}
             onPress={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim() || sending || sendingImage}
           >
             <Send size={20} color={colors.card} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {sendingImage && (
+        <View style={[styles.uploadBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[styles.uploadBannerText, { color: colors.textSecondary }]}>Uploading image...</Text>
+        </View>
+      )}
+
+      {/* Image Viewer Modal */}
+      <Modal
+        visible={imageViewerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setImageViewerVisible(false)}
+      >
+        <View style={styles.viewerOverlay}>
+          <TouchableOpacity style={styles.viewerBackdrop} activeOpacity={1} onPress={() => setImageViewerVisible(false)} />
+          <View style={styles.viewerContent}>
+            {imageViewerUrl && (
+              <Image source={{ uri: imageViewerUrl }} style={styles.viewerImage} resizeMode="contain" />
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* User Profile Modal */}
       <UserProfileModal
@@ -421,6 +495,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
   },
+  messageImage: {
+    width: 220,
+    height: 220,
+    borderRadius: 12,
+  },
   messageText: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
@@ -448,6 +527,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     gap: 12,
   },
+  attachButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
   messageInput: {
     flex: 1,
     paddingHorizontal: 16,
@@ -464,6 +551,46 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  viewerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewerBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  viewerContent: {
+    width: '90%',
+    height: '80%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  uploadBanner: {
+    position: 'absolute',
+    bottom: 8,
+    left: 16,
+    right: 16,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  uploadBannerText: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
   },
   emptyState: {
     alignItems: 'center',
