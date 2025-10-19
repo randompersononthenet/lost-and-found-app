@@ -294,10 +294,7 @@ export default function ChatScreen() {
           ]}
           pointerEvents="box-none"
         >
-          <View style={[
-            styles.reactionsPill,
-            { backgroundColor: isOwnMessage(item) ? colors.primary : colors.card, borderColor: colors.border }
-          ]}>
+          <View style={styles.reactionsPill}>
             {(() => {
               const entries = Object.entries(reactions[item.id].counts as Record<string, number>);
               const top = entries.slice(0, 3);
@@ -623,16 +620,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderRadius: 12,
-    // Semi-transparent so it doesn't obstruct the bubble visually
-    opacity: 0.95,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    backgroundColor: 'transparent',
   },
   reactionChip: {
     borderRadius: 10,
