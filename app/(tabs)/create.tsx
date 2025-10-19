@@ -8,7 +8,7 @@ import { Camera, MapPin, Calendar, ChevronDown } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
-import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 export default function CreatePostScreen() {
   const { colors } = useTheme();
@@ -152,32 +152,50 @@ export default function CreatePostScreen() {
         console.error('Database connection test failed:', error);
       }
 
-      // 1. Upload multiple images to Supabase Storage
+      // 1. Upload multiple images to Supabase Storage (with client-side compress + direct Blob upload)
       if (images.length > 0) {
         console.log(`Uploading ${images.length} images...`);
-        
+        // Helper: timeout wrapper
+        const withTimeout = async <T,>(p: Promise<T>, ms: number, label: string): Promise<T> => {
+          return await Promise.race<T>([
+            p,
+            new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out`)), ms)) as Promise<T>,
+          ]);
+        };
+
         for (let i = 0; i < images.length; i++) {
           const imageUri = images[i];
           console.log(`Uploading image ${i + 1}/${images.length}: ${imageUri}`);
           
-          const fileExt = imageUri.split('.').pop();
-          const fileName = `${user.id}_${Date.now()}_${i}.${fileExt || 'jpg'}`;
-          const fileType = 'image/jpeg';
+          // Resize/compress for faster upload and lower bandwidth
+          const manipulated = await ImageManipulator.manipulateAsync(
+            imageUri,
+            [{ resize: { width: 1280 } }],
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+          );
 
-          // Convert base64 to proper format for Supabase Storage
-          const fileBase64 = await FileSystem.readAsStringAsync(imageUri, { encoding: FileSystem.EncodingType.Base64 });
-          const fileBuffer = Uint8Array.from(atob(fileBase64), c => c.charCodeAt(0));
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('post-images')
-            .upload(fileName, fileBuffer, {
-              contentType: fileType,
-              upsert: false,
-            });
+          // Fetch blob (avoids slow base64 conversion)
+          const resp = await fetch(manipulated.uri);
+          const blob = await resp.blob();
+          const fileType = blob.type || 'image/jpeg';
+          const fileExt = 'jpg';
+          const fileName = `${user.id}_${Date.now()}_${i}.${fileExt}`;
 
-          if (uploadError) {
-            console.error(`Upload error for image ${i + 1}:`, uploadError.message);
-            throw uploadError;
+          // Simple upload with timeout and one retry
+          const doUpload = async () => {
+            const { error: uploadError } = await supabase.storage
+              .from('post-images')
+              .upload(fileName, blob, {
+                contentType: fileType,
+                upsert: false,
+              });
+            if (uploadError) throw uploadError;
+          };
+
+          try {
+            await withTimeout(doUpload(), 45000, 'Upload');
+          } catch (e1) {
+            await withTimeout(doUpload(), 45000, 'Upload (retry)');
           }
 
           // Get public URL
