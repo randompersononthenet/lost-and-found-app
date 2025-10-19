@@ -5,7 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessaging } from '@/contexts/MessagingContext';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Send, Trash2, User, MoreVertical, ImagePlus } from 'lucide-react-native';
+import { ArrowLeft, Send, Trash2, User, MoreVertical, ImagePlus, Check, CheckCheck } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
@@ -22,7 +22,10 @@ export default function ChatScreen() {
     loadMessages, 
     setCurrentConversation,
     markConversationAsRead,
-    deleteMessage
+    deleteMessage,
+    setTyping,
+    isAnyoneTyping,
+    participantsReadMap,
   } = useMessaging();
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const [newMessage, setNewMessage] = useState('');
@@ -201,6 +204,16 @@ export default function ChatScreen() {
 
   const isOwnMessage = (message: any) => message.sender_id === user?.id;
 
+  const isMessageReadByOthers = (message: any) => {
+    if (!currentConversation) return false;
+    // Consider read if any other participant's last_read_at is >= message.created_at
+    const others = (currentConversation.participants || []).map((p: any) => p.user_id).filter((id: string) => id !== user?.id);
+    return others.some((uid: string) => {
+      const ts = participantsReadMap[uid];
+      return ts && new Date(ts).getTime() >= new Date(message.created_at).getTime();
+    });
+  };
+
   const getOtherParticipants = () => {
     if (!currentConversation) {
       console.log('No current conversation loaded');
@@ -251,6 +264,15 @@ export default function ChatScreen() {
             >
               <Trash2 size={12} color={isOwnMessage(item) ? colors.card : colors.textSecondary} />
             </TouchableOpacity>
+          )}
+          {isOwnMessage(item) && (
+            <View style={{ marginLeft: 4, flexDirection: 'row', alignItems: 'center' }}>
+              {isMessageReadByOthers(item) ? (
+                <CheckCheck size={12} color={isOwnMessage(item) ? colors.card : colors.textSecondary} />
+              ) : (
+                <Check size={12} color={isOwnMessage(item) ? colors.card : colors.textSecondary} />
+              )}
+            </View>
           )}
         </View>
       </View>
@@ -313,7 +335,7 @@ export default function ChatScreen() {
               {participant.full_name || 'Unknown User'}
             </Text>
             <Text style={[styles.headerStatus, { color: colors.textSecondary }]}>
-              {otherParticipants.length === 1 ? 'Direct message' : `${otherParticipants.length} participants`}
+              {isAnyoneTyping ? 'Typing…' : (otherParticipants.length === 1 ? 'Direct message' : `${otherParticipants.length} participants`)}
             </Text>
           </View>
         </TouchableOpacity>
@@ -371,7 +393,7 @@ export default function ChatScreen() {
             placeholder="Type a message..."
             placeholderTextColor={colors.textSecondary}
             value={newMessage}
-            onChangeText={setNewMessage}
+            onChangeText={(t) => { setNewMessage(t); if (conversationId) setTyping(String(conversationId), true); }}
             multiline
             maxLength={1000}
           />
