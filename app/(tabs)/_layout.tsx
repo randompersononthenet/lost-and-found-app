@@ -16,21 +16,41 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          height: 90,
-          paddingBottom: 20,
-          paddingTop: 10,
+          height: 70,
+          paddingBottom: 12,
+          paddingTop: 8,
+          borderTopWidth: 1,
+          shadowColor: '#000',
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: -2 },
+          elevation: 6,
         },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 6,
+        },
+        tabBarBadgeStyle: {
+          backgroundColor: colors.accent,
+          color: '#fff',
+          minWidth: 18,
+          height: 18,
+          lineHeight: 18,
+          fontSize: 11,
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Feed',
-          tabBarIcon: ({ size, color }) => (
-            <Home size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Home size={22} color={color} />
           ),
         }}
       />
@@ -39,8 +59,8 @@ export default function TabLayout() {
         name="create"
         options={{
           title: 'Post',
-          tabBarIcon: ({ size, color }) => (
-            <Plus size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Plus size={22} color={color} />
           ),
         }}
       />
@@ -48,8 +68,8 @@ export default function TabLayout() {
         name="messages"
         options={{
           title: 'Messages',
-          tabBarIcon: ({ size, color }) => (
-            <MessageCircle size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MessageCircle size={22} color={color} />
           ),
         }}
       />
@@ -57,8 +77,8 @@ export default function TabLayout() {
         name="notifications"
         options={{
           title: 'Notifications',
-          tabBarIcon: ({ size, color }) => (
-            <Bell size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Bell size={22} color={color} />
           ),
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
@@ -67,8 +87,8 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ size, color }) => (
-            <User size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <User size={22} color={color} />
           ),
         }}
       />

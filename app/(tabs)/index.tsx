@@ -173,7 +173,7 @@ export default function FeedScreen() {
     });
   };
 
-  const handleDeletePost = async (post: Post) => {
+  const handleDeletePost = async (postId: string) => {
     Alert.alert(
       'Delete Post',
       'Are you sure you want to delete this post? This action cannot be undone.',
@@ -187,7 +187,7 @@ export default function FeedScreen() {
               const { error } = await supabase
                 .from('posts')
                 .delete()
-                .eq('id', post.id)
+                .eq('id', postId)
                 .eq('user_id', user!.id);
 
               if (error) throw error;
@@ -877,6 +877,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   headerTitle: {
     fontSize: 24,
@@ -895,6 +900,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   postHeader: {
     flexDirection: 'row',
@@ -988,6 +998,8 @@ const styles = StyleSheet.create({
     position: 'relative',
     height: 200,
     width: '100%',
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   gridImageContainer: {
     position: 'absolute',
@@ -1039,8 +1051,8 @@ const styles = StyleSheet.create({
   gridImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 4,
-    borderWidth: 1,
+    borderRadius: 0,
+    borderWidth: 0,
   },
   moreImagesOverlay: {
     position: 'absolute',
@@ -1048,7 +1060,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 4,
+    borderRadius: 0,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -1068,11 +1080,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
+    justifyContent: 'space-between',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 24,
+    marginRight: 16,
     gap: 4,
   },
   actionText: {

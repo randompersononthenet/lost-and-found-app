@@ -480,12 +480,10 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Select Birthday</Text>
             <TouchableOpacity onPress={() => {
-              const today = new Date();
-              const selectedDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()); // Default to 18 years ago
-              setEditForm(prev => ({ ...prev, birthday: formatDateForDatabase(selectedDate) }));
+              // Confirm current selection (if any) and close
               setDatePickerVisible(false);
             }}>
-              <Text style={[styles.modalSave, { color: colors.primary }]}>Set Default</Text>
+              <Text style={[styles.modalSave, { color: colors.primary }]}>Confirm</Text>
             </TouchableOpacity>
           </View>
 
