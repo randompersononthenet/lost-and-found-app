@@ -661,6 +661,22 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const addReaction = useCallback(async (messageId: string, reaction: string) => {
     if (!user) return;
+    // optimistic update
+    let prevSnapshot: typeof reactions | null = null;
+    setReactions(prev => {
+      prevSnapshot = prev;
+      const next = { ...prev } as typeof prev;
+      const bucket = next[messageId] ? { ...next[messageId], counts: { ...next[messageId].counts } } : { counts: {} as Record<string, number> };
+      // if user had a different reaction, decrement it first
+      if (bucket.byMe && bucket.byMe !== reaction) {
+        bucket.counts[bucket.byMe] = Math.max(0, (bucket.counts[bucket.byMe] || 1) - 1);
+        if (bucket.counts[bucket.byMe] === 0) delete bucket.counts[bucket.byMe];
+      }
+      bucket.byMe = reaction;
+      bucket.counts[reaction] = (bucket.counts[reaction] || 0) + 1;
+      next[messageId] = bucket;
+      return next;
+    });
     try {
       // Try insert; if unique constraint on (message_id, user_id) fails, update
       const { error: insertError } = await supabase
@@ -680,12 +696,28 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     } catch (e) {
       console.error('Error adding reaction:', e);
+      // rollback
+      if (prevSnapshot) setReactions(prevSnapshot);
       Toast.show({ type: 'error', text1: 'Reaction failed', text2: 'Could not add reaction' });
     }
-  }, [user]);
+  }, [user, reactions]);
 
   const removeReaction = useCallback(async (messageId: string) => {
     if (!user) return;
+    // optimistic update
+    let prevSnapshot: typeof reactions | null = null;
+    setReactions(prev => {
+      prevSnapshot = prev;
+      const next = { ...prev } as typeof prev;
+      const bucket = next[messageId];
+      if (!bucket || !bucket.byMe) return prev;
+      const current = bucket.byMe;
+      const newCounts = { ...bucket.counts };
+      newCounts[current] = Math.max(0, (newCounts[current] || 1) - 1);
+      if (newCounts[current] === 0) delete newCounts[current];
+      next[messageId] = { counts: newCounts };
+      return next;
+    });
     try {
       const { error } = await supabase
         .from('message_reactions')
@@ -695,9 +727,10 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (error) throw error;
     } catch (e) {
       console.error('Error removing reaction:', e);
+      if (prevSnapshot) setReactions(prevSnapshot);
       Toast.show({ type: 'error', text1: 'Reaction failed', text2: 'Could not remove reaction' });
     }
-  }, [user]);
+  }, [user, reactions]);
 
   // Subscribe to participants read changes for current conversation (read receipts)
   useEffect(() => {
