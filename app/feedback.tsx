@@ -31,24 +31,30 @@ export default function FeedbackScreen() {
 
     try {
       const subject = `RECLAIM App Feedback - ${rating > 0 ? `${rating}/5 Stars` : 'No Rating'}`;
-      const body = `
-Hello RECLAIM App Team,
 
-I would like to provide feedback about the app:
+      // Build body as explicit lines to avoid any unintended characters or spacing
+      const bodyLines = [
+        'Hello RECLAIM App Team,',
+        '',
+        'I would like to provide feedback about the app:',
+        '',
+        `${feedback}`,
+        '',
+        rating > 0 ? `Rating: ${rating}/5 stars` : '',
+        '',
+        'User Information:',
+        `- User ID: ${user?.id || 'Not logged in'}`,
+        `- Email: ${user?.email || 'Not provided'}`,
+        '',
+        'Thank you for your time!',
+        '',
+        'Best regards,',
+        `${user?.user_metadata?.full_name || 'App User'}`,
+      ].filter(Boolean);
 
-${feedback}
-
-${rating > 0 ? `Rating: ${rating}/5 stars` : ''}
-
-User Information:
-- User ID: ${user?.id || 'Not logged in'}
-- Email: ${user?.email || 'Not provided'}
-
-Thank you for your time!
-
-Best regards,
-${user?.user_metadata?.full_name || 'App User'}
-      `.trim();
+      // LF for native composer, CRLF for mailto to maximize compatibility
+      const bodyLF = bodyLines.join('\n');
+      const bodyCRLF = bodyLines.join('\r\n');
 
       // Prefer native mail composer if available
       const isMailComposerAvailable = await MailComposer.isAvailableAsync();
@@ -56,7 +62,7 @@ ${user?.user_metadata?.full_name || 'App User'}
         const result = await MailComposer.composeAsync({
           recipients: ['sagapaedrian@gmail.com'],
           subject,
-          body,
+          body: bodyLF,
           isHtml: false,
         });
         if (result.status === 'sent') {
@@ -72,7 +78,7 @@ ${user?.user_metadata?.full_name || 'App User'}
       }
 
       // Fallback to mailto: URL when composer is not available
-      const mailtoUrl = `mailto:sagapaedrian@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      const mailtoUrl = `mailto:sagapaedrian@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyCRLF)}`;
 
       const canOpen = await Linking.canOpenURL(mailtoUrl);
       
@@ -88,7 +94,7 @@ ${user?.user_metadata?.full_name || 'App User'}
         setRating(0);
       } else {
         // Final fallback: copy feedback to clipboard
-        await Clipboard.setStringAsync(`Subject: ${subject}\n\n${body}`);
+        await Clipboard.setStringAsync(`Subject: ${subject}\n\n${bodyLF}`);
         Alert.alert(
           'No Email Client Found',
           'We copied your feedback to the clipboard. Please paste it into your preferred email app and send it to sagapaedrian@gmail.com.',
