@@ -54,6 +54,10 @@ interface MessagingContextType {
   isAnyoneTyping: boolean;
   // Read receipts map: user_id -> last_read_at for current conversation
   participantsReadMap: Record<string, string>;
+  // Reactions
+  reactions: Record<string, { counts: Record<string, number>; byMe?: string }>;
+  addReaction: (messageId: string, reaction: string) => Promise<void>;
+  removeReaction: (messageId: string) => Promise<void>;
 }
 
 const MessagingContext = createContext<MessagingContextType | undefined>(undefined);
@@ -76,6 +80,7 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [participantsReadMap, setParticipantsReadMap] = useState<Record<string, string>>({});
   const typingChannelRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [reactions, setReactions] = useState<Record<string, { counts: Record<string, number>; byMe?: string }>>({});
 
   // Load conversations
   const loadConversations = useCallback(async () => {
@@ -310,26 +315,25 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       if (error) throw error;
 
-      // Get sender profile data for each message
-      const messagesWithProfiles = await Promise.all(
-        (data || []).map(async (message) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('id', message.sender_id)
-            .single();
+      setMessages(data || []);
 
-          return {
-            ...message,
-            sender_profile: {
-              full_name: profile?.full_name || 'Unknown User',
-              avatar_url: profile?.avatar_url,
-            },
-          };
-        })
-      );
-
-      setMessages(messagesWithProfiles);
+      // Load reactions for these messages
+      const ids = (data || []).map((m: any) => m.id);
+      if (ids.length) {
+        const { data: rx } = await supabase
+          .from('message_reactions')
+          .select('message_id, user_id, reaction')
+          .in('message_id', ids);
+        const map: Record<string, { counts: Record<string, number>; byMe?: string }> = {};
+        (rx || []).forEach((r: any) => {
+          if (!map[r.message_id]) map[r.message_id] = { counts: {} };
+          map[r.message_id].counts[r.reaction] = (map[r.message_id].counts[r.reaction] || 0) + 1;
+          if (r.user_id === user.id) map[r.message_id].byMe = r.reaction;
+        });
+        setReactions(map);
+      } else {
+        setReactions({});
+      }
     } catch (error) {
       console.error('Error loading messages:', error);
       Toast.show({
@@ -602,6 +606,99 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, [user, currentConversation, loadConversations, markConversationAsRead]);
 
+  // Realtime reactions sync for current conversation
+  useEffect(() => {
+    if (!user || !currentConversation) return;
+    const channel = supabase
+      .channel('message_reactions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, (payload) => {
+        const r = payload.new as any;
+        const oldR = payload.old as any;
+        if (!r && !oldR) return;
+        const msgId = (r && r.message_id) || (oldR && oldR.message_id);
+        // Update map only if we currently have this message in view
+        if (!messages.find(m => m.id === msgId)) return;
+        setReactions(prev => {
+          const next = { ...prev };
+          const ensure = () => (next[msgId] || (next[msgId] = { counts: {} }));
+          switch (payload.eventType) {
+            case 'INSERT': {
+              const bucket = ensure();
+              bucket.counts[r.reaction] = (bucket.counts[r.reaction] || 0) + 1;
+              if (r.user_id === user.id) bucket.byMe = r.reaction;
+              break;
+            }
+            case 'UPDATE': {
+              // Assume single reaction per user; decrement old, increment new
+              const bucket = ensure();
+              if (oldR?.reaction) {
+                bucket.counts[oldR.reaction] = Math.max(0, (bucket.counts[oldR.reaction] || 1) - 1);
+                if (bucket.counts[oldR.reaction] === 0) delete bucket.counts[oldR.reaction];
+              }
+              bucket.counts[r.reaction] = (bucket.counts[r.reaction] || 0) + 1;
+              if (r.user_id === user.id) bucket.byMe = r.reaction;
+              break;
+            }
+            case 'DELETE': {
+              const bucket = ensure();
+              const react = oldR?.reaction;
+              if (react) {
+                bucket.counts[react] = Math.max(0, (bucket.counts[react] || 1) - 1);
+                if (bucket.counts[react] === 0) delete bucket.counts[react];
+              }
+              if (oldR?.user_id === user.id) delete bucket.byMe;
+              break;
+            }
+          }
+          return next;
+        });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, currentConversation, messages]);
+
+  const addReaction = useCallback(async (messageId: string, reaction: string) => {
+    if (!user) return;
+    try {
+      // Try insert; if unique constraint on (message_id, user_id) fails, update
+      const { error: insertError } = await supabase
+        .from('message_reactions')
+        .insert({ message_id: messageId, user_id: user.id, reaction });
+      if (insertError && !String(insertError.message).toLowerCase().includes('duplicate')) {
+        throw insertError;
+      }
+      if (insertError) {
+        // update existing
+        const { error: updateError } = await supabase
+          .from('message_reactions')
+          .update({ reaction })
+          .eq('message_id', messageId)
+          .eq('user_id', user.id);
+        if (updateError) throw updateError;
+      }
+    } catch (e) {
+      console.error('Error adding reaction:', e);
+      Toast.show({ type: 'error', text1: 'Reaction failed', text2: 'Could not add reaction' });
+    }
+  }, [user]);
+
+  const removeReaction = useCallback(async (messageId: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('message_reactions')
+        .delete()
+        .eq('message_id', messageId)
+        .eq('user_id', user.id);
+      if (error) throw error;
+    } catch (e) {
+      console.error('Error removing reaction:', e);
+      Toast.show({ type: 'error', text1: 'Reaction failed', text2: 'Could not remove reaction' });
+    }
+  }, [user]);
+
   // Subscribe to participants read changes for current conversation (read receipts)
   useEffect(() => {
     if (!user || !currentConversation) return;
@@ -693,6 +790,9 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setTyping,
     isAnyoneTyping,
     participantsReadMap,
+    reactions,
+    addReaction,
+    removeReaction,
   };
 
   return (
