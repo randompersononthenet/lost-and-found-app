@@ -229,6 +229,24 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Mark conversation as read for sender
       await markConversationAsRead(conversationId);
 
+      // Update conversation's last message metadata so list shows the latest
+      try {
+        const preview = content.trim().length > 100 ? content.trim().substring(0, 100) + '…' : content.trim();
+        await supabase
+          .from('conversations')
+          .update({
+            last_message_at: data.created_at,
+            last_message_content: preview,
+            last_message_sender_id: user.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', conversationId);
+        // Proactively refresh conversations to reflect new ordering
+        await loadConversations();
+      } catch (e) {
+        console.error('Error updating conversation last message:', e);
+      }
+
       // Send push notification to other participants
       try {
         // Get conversation participants
@@ -390,6 +408,26 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             if (currentConversation) {
               markConversationAsRead(currentConversation.id);
             }
+            // Ensure conversations table reflects latest message for proper sorting and previews
+            const preview = newMessage.content?.trim()?.length > 100
+              ? newMessage.content.trim().substring(0, 100) + '…'
+              : newMessage.content?.trim() || '';
+            void (async () => {
+              try {
+                await supabase
+                  .from('conversations')
+                  .update({
+                    last_message_at: newMessage.created_at,
+                    last_message_content: preview,
+                    last_message_sender_id: newMessage.sender_id,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', newMessage.conversation_id);
+                await loadConversations();
+              } catch (e) {
+                console.error('Error syncing conversation last message on receive:', e);
+              }
+            })();
           }
         }
       )
