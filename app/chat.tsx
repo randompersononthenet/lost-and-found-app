@@ -51,6 +51,7 @@ export default function ChatScreen() {
   const [searchTab, setSearchTab] = useState<'messages' | 'images'>('messages');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   useEffect(() => {
     if (conversationId) {
@@ -252,6 +253,8 @@ export default function ChatScreen() {
           backgroundColor: isOwnMessage(item) ? colors.primary : colors.card,
           borderColor: colors.border,
         }
+      ,
+        item.id === highlightId && { borderWidth: 2, borderColor: colors.primary }
       ]}
       onLongPress={() => { setReactionTargetId(item.id); setReactionPickerVisible(true); }}
       >
@@ -527,6 +530,7 @@ export default function ChatScreen() {
                   <View style={styles.searchLoading}><ActivityIndicator /></View>
                 ) : (
                   <FlatList
+                    key="messages"
                     data={searchResults}
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.searchList}
@@ -535,7 +539,16 @@ export default function ChatScreen() {
                         style={[styles.searchMessageItem, { borderColor: colors.border, backgroundColor: colors.card }]}
                         onPress={() => {
                           setSearchVisible(false);
-                          // Optionally, we could scroll to the message here (needs indices mapping)
+                          const idx = messages.findIndex(m => m.id === item.id);
+                          if (idx >= 0) {
+                            setTimeout(() => {
+                              try {
+                                flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
+                              } catch {}
+                              setHighlightId(item.id);
+                              setTimeout(() => setHighlightId(null), 1500);
+                            }, 250);
+                          }
                         }}
                       >
                         <Text style={[styles.searchMessageText, { color: colors.text }]}>{item.content}</Text>
@@ -549,6 +562,7 @@ export default function ChatScreen() {
                   <View style={styles.searchLoading}><ActivityIndicator /></View>
                 ) : (
                   <FlatList
+                    key="images"
                     data={searchResults}
                     keyExtractor={(item) => item.id}
                     numColumns={3}

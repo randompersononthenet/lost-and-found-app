@@ -832,30 +832,33 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     searchMessages: async (conversationId: string, query: string) => {
       if (!user || !conversationId || !query.trim()) return [];
       try {
-        // Prefer FTS on content_tsv using websearch
+        // Prefer RPC for ranked, limited FTS
         const q = query.trim();
-        let res = await supabase
+        const rpc = await supabase.rpc('search_messages', { conv: conversationId, q, lim: 50, off: 0 });
+        if (!rpc.error) return rpc.data || [];
+        // Fallback to FTS on content_tsv using websearch
+        let fts = await supabase
           .from('messages')
           .select('*')
           .eq('conversation_id', conversationId)
           .eq('is_deleted', false)
           .eq('message_type', 'text')
           .textSearch('content_tsv', q, { type: 'websearch' })
-          .order('created_at', { ascending: true });
-        if (res.error) {
-          // Fallback to ilike if FTS is not available
-          const fallback = await supabase
-            .from('messages')
-            .select('*')
-            .eq('conversation_id', conversationId)
-            .eq('is_deleted', false)
-            .eq('message_type', 'text')
-            .ilike('content', `%${q}%`)
-            .order('created_at', { ascending: true });
-          if (fallback.error) throw fallback.error;
-          return fallback.data || [];
-        }
-        return res.data || [];
+          .order('created_at', { ascending: true })
+          .limit(50);
+        if (!fts.error) return fts.data || [];
+        // Fallback to ilike
+        const fallback = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .eq('is_deleted', false)
+          .eq('message_type', 'text')
+          .ilike('content', `%${q}%`)
+          .order('created_at', { ascending: true })
+          .limit(50);
+        if (fallback.error) throw fallback.error;
+        return fallback.data || [];
       } catch (e) {
         console.error('searchMessages error:', e);
         Toast.show({ type: 'error', text1: 'Search Failed', text2: 'Unable to search messages' });

@@ -12,6 +12,7 @@ where content_tsv is null;
 
 -- 3) Index
 create index if not exists messages_content_tsv_idx
+
   on public.messages using gin (content_tsv);
 
 -- 4) Trigger function to keep it updated
