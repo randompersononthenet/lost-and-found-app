@@ -20,7 +20,7 @@ export default function MyPostsScreen() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const POSTS_PER_PAGE = 20;
 
@@ -103,18 +103,25 @@ export default function MyPostsScreen() {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery, fetchPosts]);
+  }, [searchQuery]);
 
   // Fetch posts when filters change
   useEffect(() => {
     setPage(0);
     fetchPosts(true);
-  }, [selectedCategory, fetchPosts]);
+  }, [selectedCategory]);
+
+  // Load more when page changes (and page > 0) to avoid double-fetch in onEndReached
+  useEffect(() => {
+    if (page > 0) {
+      fetchPosts(false, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) {
       setPage(prev => prev + 1);
-      fetchPosts(false, true);
     }
   };
 
@@ -267,7 +274,7 @@ export default function MyPostsScreen() {
         <FlatList
           data={posts}
           renderItem={renderPost}
-          keyExtractor={(item, index) => `${item.id}-${index}`}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchPosts(true)} />}
           onEndReached={handleLoadMore}
