@@ -39,7 +39,10 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
-  }),
+    // iOS specific fields for newer SDKs
+    shouldShowBanner: true,
+    shouldShowList: true,
+  } as Notifications.NotificationBehavior),
 });
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
@@ -147,8 +150,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         )
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error marking notification as read:', error);
+      Toast.show({ type: 'error', text1: 'Error', text2: error?.message || 'Failed to mark as read' });
     }
   };
 
@@ -168,8 +172,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       // Update local state
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error marking all notifications as read:', error);
+      Toast.show({ type: 'error', text1: 'Error', text2: error?.message || 'Failed to mark all as read' });
     }
   };
 
@@ -186,14 +191,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
       if (error) throw error;
 
-      // Update local state
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      const deletedNotification = notifications.find(n => n.id === notificationId);
-      if (deletedNotification && !deletedNotification.read) {
+      // Update local state & unread count based on previous state
+      let wasUnread = false;
+      setNotifications(prev => {
+        const target = prev.find(n => n.id === notificationId);
+        wasUnread = !!(target && !target.read);
+        return prev.filter(n => n.id !== notificationId);
+      });
+      if (wasUnread) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting notification:', error);
+      Toast.show({ type: 'error', text1: 'Error', text2: error?.message || 'Failed to delete notification' });
     }
   };
 
@@ -212,8 +222,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       // Update local state
       setNotifications([]);
       setUnreadCount(0);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error clearing all notifications:', error);
+      Toast.show({ type: 'error', text1: 'Error', text2: error?.message || 'Failed to clear notifications' });
     }
   };
 
