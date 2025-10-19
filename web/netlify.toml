@@ -1,0 +1,10 @@
+[build]
+  base = "web"
+  command = "cd .. && npm ci && npm run build:web && rm -rf web/dist && mkdir -p web/dist && cp -r dist/* web/dist"
+  publish = "dist"
+
+# SPA fallback so Expo Router serves index.html for all routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
