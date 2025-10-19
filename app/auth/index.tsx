@@ -114,7 +114,7 @@ export default function AuthScreen() {
                 resizeMode="contain"
               />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>RECALL</Text>
+            <Text style={[styles.title, { color: colors.text }]}>RECLAIM</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Lost & Found for your school community
             </Text>
