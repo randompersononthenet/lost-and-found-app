@@ -26,6 +26,9 @@ export default function ChatScreen() {
     setTyping,
     isAnyoneTyping,
     participantsReadMap,
+    reactions,
+    addReaction,
+    removeReaction,
   } = useMessaging();
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const [newMessage, setNewMessage] = useState('');
@@ -36,6 +39,9 @@ export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [imageViewerUrl, setImageViewerUrl] = useState<string | null>(null);
+  const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
+  const [reactionTargetId, setReactionTargetId] = useState<string | null>(null);
+  const reactionOptions = ['👍','❤️','😂','😮','😢'];
 
   useEffect(() => {
     if (conversationId) {
@@ -231,13 +237,15 @@ export default function ChatScreen() {
       styles.messageContainer,
       isOwnMessage(item) ? styles.ownMessage : styles.otherMessage
     ]}>
-      <View style={[
+      <TouchableOpacity style={[
         styles.messageBubble,
         {
           backgroundColor: isOwnMessage(item) ? colors.primary : colors.card,
           borderColor: colors.border,
         }
-      ]}>
+      ]}
+      onLongPress={() => { setReactionTargetId(item.id); setReactionPickerVisible(true); }}
+      >
         {item.message_type === 'image' && item.metadata?.url ? (
           <TouchableOpacity onPress={() => { setImageViewerUrl(item.metadata.url); setImageViewerVisible(true); }}>
             <Image source={{ uri: item.metadata.url }} style={styles.messageImage} resizeMode="cover" />
@@ -275,7 +283,17 @@ export default function ChatScreen() {
             </View>
           )}
         </View>
-      </View>
+        {/* Reactions row */}
+        {reactions[item.id] && Object.keys(reactions[item.id].counts).length > 0 && (
+          <View style={[styles.reactionsRow, { backgroundColor: isOwnMessage(item) ? colors.primary : colors.card, borderColor: colors.border }]}> 
+            {Object.entries(reactions[item.id].counts as Record<string, number>).map(([emoji, count]) => (
+              <View key={emoji} style={[styles.reactionChip, { backgroundColor: isOwnMessage(item) ? 'rgba(255,255,255,0.15)' : '#00000010' }]}> 
+                <Text style={[styles.reactionText, { color: isOwnMessage(item) ? colors.card : colors.text }]}>{emoji} {count}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </TouchableOpacity>
     </View>
   );
 
@@ -413,6 +431,41 @@ export default function ChatScreen() {
         </View>
       </KeyboardAvoidingView>
 
+      {/* Reaction Picker */}
+      <Modal
+        visible={reactionPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReactionPickerVisible(false)}
+      >
+        <TouchableOpacity style={styles.reactionPickerOverlay} activeOpacity={1} onPress={() => setReactionPickerVisible(false)}>
+          <View style={[styles.reactionPicker, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            {reactionOptions.map((emoji) => (
+              <TouchableOpacity
+                key={emoji}
+                style={styles.reactionOption}
+                onPress={async () => {
+                  if (!reactionTargetId) return;
+                  const myCurrent = reactions[reactionTargetId]?.byMe;
+                  try {
+                    if (myCurrent === emoji) {
+                      await removeReaction(reactionTargetId);
+                    } else {
+                      await addReaction(reactionTargetId, emoji);
+                    }
+                  } finally {
+                    setReactionPickerVisible(false);
+                    setReactionTargetId(null);
+                  }
+                }}
+              >
+                <Text style={[styles.reactionOptionText, { color: colors.text }]}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {sendingImage && (
         <View style={[styles.uploadBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
           <ActivityIndicator size="small" color={colors.primary} />
@@ -534,6 +587,25 @@ const styles = StyleSheet.create({
     marginTop: 4,
     gap: 8,
   },
+  reactionsRow: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginTop: 6,
+  },
+  reactionChip: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  reactionText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
   messageTime: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
@@ -596,6 +668,28 @@ const styles = StyleSheet.create({
   viewerImage: {
     width: '100%',
     height: '100%',
+  },
+  reactionPickerOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 24,
+    backgroundColor: 'rgba(0,0,0,0.35)'
+  },
+  reactionPicker: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  reactionOption: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  reactionOptionText: {
+    fontSize: 22,
   },
   uploadBanner: {
     position: 'absolute',
