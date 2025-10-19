@@ -92,7 +92,7 @@ export default function Dashboard() {
 					<>
 						<div className="dashboard-header">
 							<div className="welcome-section">
-								<h1>Welcome to RECALL Admin</h1>
+								<h1>Welcome to RECLAIM Admin</h1>
 								<p>Monitor and manage your lost & found platform</p>
 							</div>
 							<div className="overview-stats">

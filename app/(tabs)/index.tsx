@@ -309,8 +309,8 @@ export default function FeedScreen() {
       const message = messageParts.filter(Boolean).join('');
 
       await Share.share({
-        message: message || 'Check out this RECALL post!',
-        title: 'RECALL',
+        message: message || 'Check out this RECLAIM post!',
+        title: 'RECLAIM',
         url: deepLink,
       });
     } catch (error) {
@@ -695,7 +695,7 @@ export default function FeedScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>RECALL</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>RECLAIM</Text>
         <TouchableOpacity
           style={styles.searchButton}
           onPress={() => router.push('/search')}

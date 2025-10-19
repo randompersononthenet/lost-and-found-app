@@ -27,8 +27,8 @@ export default function Nav({ title, children }: { title: string, children: Reac
 				<div className="sidebar-header">
 					{!sidebarCollapsed && (
 						<div className="brand">
-							<img src="/assets/images/icon.png" alt="RECALL" style={{ width: '32px', height: '32px', borderRadius: '6px' }} />
-							<span className="brand-text">RECALL</span>
+							<img src="/assets/images/icon.png" alt="RECLAIM" style={{ width: '32px', height: '32px', borderRadius: '6px' }} />
+							<span className="brand-text">RECLAIM</span>
 						</div>
 					)}
 					<button 

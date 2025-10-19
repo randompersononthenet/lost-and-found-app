@@ -30,9 +30,9 @@ export default function FeedbackScreen() {
     setLoading(true);
 
     try {
-      const subject = `RECALL App Feedback - ${rating > 0 ? `${rating}/5 Stars` : 'No Rating'}`;
+      const subject = `RECLAIM App Feedback - ${rating > 0 ? `${rating}/5 Stars` : 'No Rating'}`;
       const body = `
-Hello RECALL App Team,
+Hello RECLAIM App Team,
 
 I would like to provide feedback about the app:
 
@@ -159,7 +159,7 @@ ${user?.user_metadata?.full_name || 'App User'}
           </Text>
           
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Your feedback helps us improve the RECALL app. Share your thoughts, suggestions, or report any issues you've encountered.
+            Your feedback helps us improve the RECLAIM app. Share your thoughts, suggestions, or report any issues you've encountered.
           </Text>
 
           {renderStars()}
