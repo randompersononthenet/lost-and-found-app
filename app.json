@@ -41,12 +41,12 @@
     "experiments": {
       "typedRoutes": true
     },
+    "owner": "aedriansagap",
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5599c6dc-1595-4c16-a7ed-14701afb6a4c"
+        "projectId": "267904ae-d850-4dba-b5c4-530f78abad0c"
       }
-    },
-    "owner": "aedriansagap"
+    }
   }
 }
