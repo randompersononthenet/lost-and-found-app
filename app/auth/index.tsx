@@ -9,7 +9,7 @@ import Toast from 'react-native-toast-message';
 
 export default function AuthScreen() {
   const { colors } = useTheme();
-  const { signIn, signUp, forgotPassword, user } = useAuth();
+  const { signIn, signUp, forgotPassword, user, isPasswordResetFlow, completePasswordReset } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,6 +22,11 @@ export default function AuthScreen() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState('');
   const [forgotError, setForgotError] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
 
   // Redirect if already logged in
   React.useEffect(() => {
@@ -81,6 +86,26 @@ export default function AuthScreen() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCompleteReset = async () => {
+    setResetError('');
+    setResetSuccess('');
+    if (!resetPassword.trim() || resetPassword !== resetConfirmPassword) {
+      setResetError('Passwords do not match.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await completePasswordReset(resetPassword);
+      setResetSuccess('Password updated successfully. You can now sign in.');
+      setResetPassword('');
+      setResetConfirmPassword('');
+    } catch (e: any) {
+      setResetError(e?.message || 'Failed to update password.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -245,6 +270,51 @@ export default function AuthScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Reset Password Modal (Deep link flow) */}
+          {isPasswordResetFlow && (
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Set New Password</Text>
+                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Enter and confirm your new password to complete the reset.</Text>
+                <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: 16 }]}> 
+                  <TextInput
+                    style={[styles.textInputFull, { color: colors.text }]}
+                    placeholder="New password"
+                    placeholderTextColor={colors.textSecondary}
+                    secureTextEntry
+                    value={resetPassword}
+                    onChangeText={setResetPassword}
+                  />
+                </View>
+                <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: 8 }]}> 
+                  <TextInput
+                    style={[styles.textInputFull, { color: colors.text }]}
+                    placeholder="Confirm new password"
+                    placeholderTextColor={colors.textSecondary}
+                    secureTextEntry
+                    value={resetConfirmPassword}
+                    onChangeText={setResetConfirmPassword}
+                  />
+                </View>
+                {resetError ? (
+                  <Text style={{ color: colors.error, marginTop: 8 }}>{resetError}</Text>
+                ) : null}
+                {resetSuccess ? (
+                  <Text style={{ color: colors.success, marginTop: 8 }}>{resetSuccess}</Text>
+                ) : null}
+                <TouchableOpacity
+                  style={[styles.submitButton, { backgroundColor: colors.primary, marginTop: 16 }]} 
+                  onPress={handleCompleteReset}
+                  disabled={resetLoading}
+                >
+                  <Text style={[styles.submitButtonText, { color: colors.card }]}> 
+                    {resetLoading ? 'Updating...' : 'Update Password'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {/* Forgot Password Modal */}
           {forgotModalVisible && (

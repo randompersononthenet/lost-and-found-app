@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import * as Linking from 'expo-linking';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -26,6 +27,8 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   deactivateAccount: (password: string) => Promise<void>;
+  isPasswordResetFlow: boolean;
+  completePasswordReset: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const mounted = useRef(false);
+  const [isPasswordResetFlow, setIsPasswordResetFlow] = useState(false);
 
   const loadProfile = async (userId: string) => {
     if (!mounted.current) return;
@@ -82,6 +86,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session.user);
           await loadProfile(session.user.id);
         }
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) {
+          const parsed = Linking.parse(initialUrl);
+          const type = (parsed.queryParams as any)?.type;
+          const code = (parsed.queryParams as any)?.code as string | undefined;
+          if (type === 'recovery' && code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (!error) setIsPasswordResetFlow(true);
+          }
+        }
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
@@ -98,7 +112,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (!mounted.current) return;
         
-        if (event === 'SIGNED_IN' && session?.user) {
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordResetFlow(true);
+        } else if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
           await loadProfile(session.user.id);
         } else if (event === 'SIGNED_OUT') {
@@ -111,8 +127,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    const urlListener = Linking.addEventListener('url', async ({ url }) => {
+      try {
+        const parsed = Linking.parse(url);
+        const type = (parsed.queryParams as any)?.type;
+        const code = (parsed.queryParams as any)?.code as string | undefined;
+        if (type === 'recovery' && code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (!error) setIsPasswordResetFlow(true);
+        }
+      } catch (e) {}
+    });
+
     return () => {
       subscription.unsubscribe();
+      urlListener.remove();
       mounted.current = false;
     };
   }, []);
@@ -199,8 +228,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!email.endsWith('.edu') && !email.endsWith('.edu.ph')) {
       throw new Error('Please use your educational email address (.edu or .edu.ph)');
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const redirectTo = 'recall://auth/reset?type=recovery';
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) throw error;
+  };
+
+  const completePasswordReset = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    setIsPasswordResetFlow(false);
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
@@ -266,6 +302,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       forgotPassword,
       changePassword,
       deactivateAccount,
+      isPasswordResetFlow,
+      completePasswordReset,
     }}>
       {children}
     </AuthContext.Provider>
