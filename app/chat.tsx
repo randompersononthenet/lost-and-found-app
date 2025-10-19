@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Send, Trash2, User, MoreVertical, ImagePlus, Check, CheckCheck } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import * as Haptics from 'expo-haptics';
 import UserProfileModal from '@/components/UserProfileModal';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -283,17 +284,42 @@ export default function ChatScreen() {
             </View>
           )}
         </View>
-        {/* Reactions row */}
-        {reactions[item.id] && Object.keys(reactions[item.id].counts).length > 0 && (
-          <View style={[styles.reactionsRow, { backgroundColor: isOwnMessage(item) ? colors.primary : colors.card, borderColor: colors.border }]}> 
-            {Object.entries(reactions[item.id].counts as Record<string, number>).map(([emoji, count]) => (
-              <View key={emoji} style={[styles.reactionChip, { backgroundColor: isOwnMessage(item) ? 'rgba(255,255,255,0.15)' : '#00000010' }]}> 
-                <Text style={[styles.reactionText, { color: isOwnMessage(item) ? colors.card : colors.text }]}>{emoji} {count}</Text>
-              </View>
-            ))}
-          </View>
-        )}
       </TouchableOpacity>
+      {/* Reactions: edge placement */}
+      {reactions[item.id] && Object.keys(reactions[item.id].counts).length > 0 && (
+        <View
+          style={[
+            styles.reactionsEdge,
+            isOwnMessage(item) ? { right: 0 } : { left: 0 },
+          ]}
+          pointerEvents="box-none"
+        >
+          <View style={[
+            styles.reactionsPill,
+            { backgroundColor: isOwnMessage(item) ? colors.primary : colors.card, borderColor: colors.border }
+          ]}>
+            {(() => {
+              const entries = Object.entries(reactions[item.id].counts as Record<string, number>);
+              const top = entries.slice(0, 3);
+              const extra = entries.length - top.length;
+              return (
+                <>
+                  {top.map(([emoji, count]) => (
+                    <View key={emoji} style={[styles.reactionChip, { backgroundColor: isOwnMessage(item) ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.06)' }]}> 
+                      <Text style={[styles.reactionText, { color: isOwnMessage(item) ? colors.card : colors.text }]}>{emoji} {count}</Text>
+                    </View>
+                  ))}
+                  {extra > 0 && (
+                    <View style={[styles.reactionChip, { backgroundColor: isOwnMessage(item) ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.05)' }]}> 
+                      <Text style={[styles.reactionText, { color: isOwnMessage(item) ? colors.card : colors.text }]}>+{extra}</Text>
+                    </View>
+                  )}
+                </>
+              );
+            })()}
+          </View>
+        </View>
+      )}
     </View>
   );
 
@@ -448,6 +474,7 @@ export default function ChatScreen() {
                   if (!reactionTargetId) return;
                   const myCurrent = reactions[reactionTargetId]?.byMe;
                   try {
+                    await Haptics.selectionAsync();
                     if (myCurrent === emoji) {
                       await removeReaction(reactionTargetId);
                     } else {
@@ -555,7 +582,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   messageContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
+    position: 'relative',
   },
   ownMessage: {
     alignItems: 'flex-end',
@@ -587,15 +615,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
     gap: 8,
   },
-  reactionsRow: {
+  reactionsEdge: {
+    position: 'absolute',
+    bottom: -10,
+  },
+  reactionsPill: {
     flexDirection: 'row',
-    alignSelf: 'flex-start',
+    alignItems: 'center',
     gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderWidth: 1,
     borderRadius: 12,
-    marginTop: 6,
+    // Semi-transparent so it doesn't obstruct the bubble visually
+    opacity: 0.95,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   reactionChip: {
     borderRadius: 10,
