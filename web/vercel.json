@@ -1,5 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "cd .. && npm ci && npx expo export --platform web --output-dir web/out",
-  "outputDirectory": "out"
+  "buildCommand": "cd .. && npm ci && npm run build:web",
+  "outputDirectory": "../dist"
 }
