@@ -43,6 +43,7 @@ interface MessagingContextType {
   loading: boolean;
   sendMessage: (conversationId: string, content: string) => Promise<void>;
   sendImage: (conversationId: string, localUri: string) => Promise<void>;
+  sendImages: (conversationId: string, localUris: string[]) => Promise<void>;
   createConversation: (participantIds: string[]) => Promise<string>;
   loadConversations: () => Promise<void>;
   loadMessages: (conversationId: string) => Promise<void>;
@@ -303,6 +304,20 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       Toast.show({ type: 'error', text1: 'Image Send Failed', text2: 'Could not send image. Please try again.' });
     }
   }, [user, loadConversations]);
+
+  // Send multiple images (max 5)
+  const sendImages = useCallback(async (conversationId: string, localUris: string[]) => {
+    if (!user || !Array.isArray(localUris) || localUris.length === 0) return;
+    const capped = localUris.slice(0, 5);
+    for (const uri of capped) {
+      try {
+        await sendImage(conversationId, uri);
+      } catch (e) {
+        console.error('Failed to send one of the images:', e);
+        // Continue sending remaining images
+      }
+    }
+  }, [user, sendImage]);
 
   // Load messages for a conversation
   const loadMessages = useCallback(async (conversationId: string) => {
@@ -817,6 +832,7 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     loading,
     sendMessage,
     sendImage,
+    sendImages,
     createConversation,
     loadConversations,
     loadMessages,

@@ -20,6 +20,7 @@ export default function ChatScreen() {
     currentConversation, 
     sendMessage, 
     sendImage,
+    sendImages,
     loadMessages, 
     setCurrentConversation,
     markConversationAsRead,
@@ -159,13 +160,21 @@ export default function ChatScreen() {
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: false,
+        allowsMultipleSelection: true,
+        selectionLimit: 5,
         quality: 0.8,
       });
       if (result.canceled || !result.assets?.length) return;
-      const uri = result.assets[0].uri;
+      const uris = result.assets.map(a => a.uri).filter(Boolean);
+      if (uris.length > 5) {
+        Toast.show({ type: 'info', text1: 'Limited to 5', text2: 'Only the first 5 images will be sent.' });
+      }
       setSendingImage(true);
-      await sendImage(conversationId, uri);
+      if (uris.length === 1) {
+        await sendImage(conversationId, uris[0]);
+      } else {
+        await sendImages(conversationId, uris.slice(0, 5));
+      }
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
@@ -442,7 +451,7 @@ export default function ChatScreen() {
             {sendingImage ? (
               <ActivityIndicator size="small" color={colors.textSecondary} />
             ) : (
-              <ImagePlus size={20} color={colors.textSecondary} />
+              <ImagePlus size={22} color={colors.textSecondary} style={{ marginTop: 1 }} />
             )}
           </TouchableOpacity>
           <TextInput
@@ -896,7 +905,7 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
@@ -913,12 +922,14 @@ const styles = StyleSheet.create({
   messageInput: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    maxHeight: 100,
+    minHeight: 40,
+    maxHeight: 120,
+    textAlignVertical: 'center',
   },
   sendButton: {
     width: 40,
