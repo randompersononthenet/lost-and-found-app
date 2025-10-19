@@ -163,8 +163,8 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Client-side resize/compress for better UX and smaller uploads
       const manipulated = await ImageManipulator.manipulateAsync(
         localUri,
-        [{ resize: { width: 1280 } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        [{ resize: { width: 1024 } }],
+        { compress: 0.65, format: ImageManipulator.SaveFormat.JPEG }
       );
 
       // Prepare upload
@@ -182,19 +182,44 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const fileName = `${Date.now()}.${fileExt}`;
       const path = `${conversationId}/${fileName}`;
 
-      // Upload to storage bucket 'message-media'
-      const { error: uploadError } = await supabase.storage
-        .from('message-media')
-        .upload(path, blob, {
-          contentType: mime,
-          upsert: false,
-        });
-      if (uploadError) throw uploadError;
+      // Helper: timeout wrapper
+      const withTimeout = async <T,>(p: Promise<T>, ms: number, label: string): Promise<T> => {
+        return await Promise.race<T>([
+          p,
+          new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out`)), ms)) as Promise<T>,
+        ]);
+      };
+
+      // Upload to storage bucket 'message-media' with simple retry
+      const doUpload = async () => {
+        const { error: uploadError } = await supabase.storage
+          .from('message-media')
+          .upload(path, blob, {
+            contentType: mime,
+            upsert: false,
+          });
+        if (uploadError) throw uploadError;
+      };
+
+      try {
+        await withTimeout(doUpload(), 45000, 'Upload');
+      } catch (e1) {
+        // quick retry once
+        await withTimeout(doUpload(), 45000, 'Upload (retry)');
+      }
 
       // Get public URL
       const { data: urlData } = supabase.storage.from('message-media').getPublicUrl(path);
       const publicUrl = urlData?.publicUrl;
       if (!publicUrl) throw new Error('Failed to resolve uploaded image URL');
+
+      // Verify the URL is accessible
+      try {
+        await withTimeout(fetch(publicUrl, { method: 'HEAD', cache: 'no-store' }), 15000, 'URL verify');
+      } catch (verifyErr) {
+        // Not fatal if bucket is private and you intend to sign later, but surface a warning
+        console.warn('Image public URL not immediately accessible:', verifyErr);
+      }
 
       // Insert message
       const { data: inserted, error: insertError } = await supabase
@@ -235,6 +260,8 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } catch (e) {
         console.error('Error updating conversation after image send:', e);
       }
+
+      Toast.show({ type: 'success', text1: 'Image uploaded', text2: 'Your image was sent.' });
     } catch (error) {
       console.error('Error sending image:', error);
       Toast.show({ type: 'error', text1: 'Image Send Failed', text2: 'Could not send image. Please try again.' });
