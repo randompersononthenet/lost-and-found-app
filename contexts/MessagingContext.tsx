@@ -49,6 +49,11 @@ interface MessagingContextType {
   setCurrentConversation: (conversation: Conversation | null) => void;
   markConversationAsRead: (conversationId: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
+  // Typing indicators
+  setTyping: (conversationId: string, isTyping: boolean) => void;
+  isAnyoneTyping: boolean;
+  // Read receipts map: user_id -> last_read_at for current conversation
+  participantsReadMap: Record<string, string>;
 }
 
 const MessagingContext = createContext<MessagingContextType | undefined>(undefined);
@@ -67,6 +72,10 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isAnyoneTyping, setIsAnyoneTyping] = useState(false);
+  const [participantsReadMap, setParticipantsReadMap] = useState<Record<string, string>>({});
+  const typingChannelRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const typingDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load conversations
   const loadConversations = useCallback(async () => {
@@ -152,6 +161,25 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
     } finally {
       setLoading(false);
+    }
+  }, [user]);
+
+  // --- Read receipts: load participants' last_read_at for current conversation ---
+  const loadParticipantsReadMap = useCallback(async (conversationId: string) => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('conversation_participants')
+        .select('user_id, last_read_at')
+        .eq('conversation_id', conversationId);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((row: any) => {
+        if (row.user_id && row.last_read_at) map[row.user_id] = row.last_read_at;
+      });
+      setParticipantsReadMap(map);
+    } catch (e) {
+      console.error('Error loading participants read map:', e);
     }
   }, [user]);
 
@@ -470,10 +498,12 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         .update({ last_read_at: new Date().toISOString() })
         .eq('conversation_id', conversationId)
         .eq('user_id', user.id);
+      // Refresh read map after updating
+      loadParticipantsReadMap(conversationId);
     } catch (error) {
       console.error('Error marking conversation as read:', error);
     }
-  }, [user]);
+  }, [user, loadParticipantsReadMap]);
 
   // Delete a message
   const deleteMessage = useCallback(async (messageId: string) => {
@@ -572,6 +602,76 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, [user, currentConversation, loadConversations, markConversationAsRead]);
 
+  // Subscribe to participants read changes for current conversation (read receipts)
+  useEffect(() => {
+    if (!user || !currentConversation) return;
+    loadParticipantsReadMap(currentConversation.id);
+    const readChannel = supabase
+      .channel('participants_read')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'conversation_participants',
+        filter: `conversation_id=eq.${currentConversation.id}`,
+      }, () => {
+        loadParticipantsReadMap(currentConversation.id);
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(readChannel);
+    };
+  }, [user, currentConversation, loadParticipantsReadMap]);
+
+  // Typing indicators: join presence channel per conversation
+  useEffect(() => {
+    if (!user || !currentConversation) return;
+
+    // cleanup previous channel
+    if (typingChannelRef.current) {
+      supabase.removeChannel(typingChannelRef.current);
+      typingChannelRef.current = null;
+    }
+
+    const channel = supabase.channel(`typing:${currentConversation.id}`, { config: { presence: { key: user.id } } });
+    typingChannelRef.current = channel;
+
+    channel.on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState() as Record<string, Array<{ isTyping?: boolean }>>;
+      // Someone else typing?
+      let any = false;
+      Object.entries(state).forEach(([uid, metas]) => {
+        if (uid !== user.id && metas.some((m: any) => m.isTyping)) any = true;
+      });
+      setIsAnyoneTyping(any);
+    });
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({ isTyping: false });
+      }
+    });
+
+    return () => {
+      if (typingChannelRef.current) {
+        supabase.removeChannel(typingChannelRef.current);
+        typingChannelRef.current = null;
+      }
+      setIsAnyoneTyping(false);
+    };
+  }, [user, currentConversation]);
+
+  const setTyping = useCallback((conversationId: string, isTyping: boolean) => {
+    if (!typingChannelRef.current || !currentConversation || currentConversation.id !== conversationId) return;
+    // throttle: immediately set true, and auto-false after 2s idle
+    void typingChannelRef.current.track({ isTyping }).catch(() => {});
+    if (isTyping) {
+      if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+      typingDebounceRef.current = setTimeout(() => {
+        void typingChannelRef.current?.track({ isTyping: false }).catch(() => {});
+      }, 2000);
+    }
+  }, [currentConversation]);
+
   // Load conversations on mount
   useEffect(() => {
     loadConversations();
@@ -590,6 +690,9 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCurrentConversation,
     markConversationAsRead,
     deleteMessage,
+    setTyping,
+    isAnyoneTyping,
+    participantsReadMap,
   };
 
   return (
