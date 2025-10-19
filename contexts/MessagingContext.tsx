@@ -58,6 +58,9 @@ interface MessagingContextType {
   reactions: Record<string, { counts: Record<string, number>; byMe?: string }>;
   addReaction: (messageId: string, reaction: string) => Promise<void>;
   removeReaction: (messageId: string) => Promise<void>;
+  // Search
+  searchMessages: (conversationId: string, query: string) => Promise<Message[]>;
+  listConversationImages: (conversationId: string) => Promise<Message[]>;
 }
 
 const MessagingContext = createContext<MessagingContextType | undefined>(undefined);
@@ -826,6 +829,57 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     reactions,
     addReaction,
     removeReaction,
+    searchMessages: async (conversationId: string, query: string) => {
+      if (!user || !conversationId || !query.trim()) return [];
+      try {
+        // Prefer FTS on content_tsv using websearch
+        const q = query.trim();
+        let res = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .eq('is_deleted', false)
+          .eq('message_type', 'text')
+          .textSearch('content_tsv', q, { type: 'websearch' })
+          .order('created_at', { ascending: true });
+        if (res.error) {
+          // Fallback to ilike if FTS is not available
+          const fallback = await supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', conversationId)
+            .eq('is_deleted', false)
+            .eq('message_type', 'text')
+            .ilike('content', `%${q}%`)
+            .order('created_at', { ascending: true });
+          if (fallback.error) throw fallback.error;
+          return fallback.data || [];
+        }
+        return res.data || [];
+      } catch (e) {
+        console.error('searchMessages error:', e);
+        Toast.show({ type: 'error', text1: 'Search Failed', text2: 'Unable to search messages' });
+        return [];
+      }
+    },
+    listConversationImages: async (conversationId: string) => {
+      if (!user || !conversationId) return [];
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .eq('is_deleted', false)
+          .eq('message_type', 'image')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+      } catch (e) {
+        console.error('listConversationImages error:', e);
+        Toast.show({ type: 'error', text1: 'Load Failed', text2: 'Unable to load images' });
+        return [];
+      }
+    },
   };
 
   return (

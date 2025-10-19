@@ -5,7 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessaging } from '@/contexts/MessagingContext';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Send, Trash2, User, MoreVertical, ImagePlus, Check, CheckCheck } from 'lucide-react-native';
+import { ArrowLeft, Send, Trash2, User, MoreVertical, ImagePlus, Check, CheckCheck, Search } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import * as Haptics from 'expo-haptics';
@@ -30,6 +30,8 @@ export default function ChatScreen() {
     reactions,
     addReaction,
     removeReaction,
+    searchMessages,
+    listConversationImages,
   } = useMessaging();
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const [newMessage, setNewMessage] = useState('');
@@ -43,6 +45,12 @@ export default function ChatScreen() {
   const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
   const [reactionTargetId, setReactionTargetId] = useState<string | null>(null);
   const reactionOptions = ['👍','❤️','😂','😮','😢'];
+  // Search UI state
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTab, setSearchTab] = useState<'messages' | 'images'>('messages');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
 
   useEffect(() => {
     if (conversationId) {
@@ -381,9 +389,14 @@ export default function ChatScreen() {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.moreButton}>
-          <MoreVertical size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity style={styles.moreButton} onPress={() => setSearchVisible(true)}>
+            <Search size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.moreButton}>
+            <MoreVertical size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -453,6 +466,119 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Search Modal */}
+      <Modal
+        visible={searchVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSearchVisible(false)}
+      >
+        <View style={styles.searchOverlay}>
+          <View style={[styles.searchSheet, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            <View style={styles.searchHeaderRow}>
+              <Text style={[styles.searchTitle, { color: colors.text }]}>Search</Text>
+              <TouchableOpacity onPress={() => setSearchVisible(false)}>
+                <Text style={[styles.searchClose, { color: colors.textSecondary }]}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.searchTabsRow}>
+              <TouchableOpacity onPress={() => setSearchTab('messages')} style={[styles.searchTab, searchTab==='messages' && [styles.searchTabActive, { borderBottomColor: colors.primary }]]}>
+                <Text style={[styles.searchTabText, { color: searchTab==='messages' ? colors.primary : colors.textSecondary }]}>Messages</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSearchTab('images')} style={[styles.searchTab, searchTab==='images' && [styles.searchTabActive, { borderBottomColor: colors.primary }]]}>
+                <Text style={[styles.searchTabText, { color: searchTab==='images' ? colors.primary : colors.textSecondary }]}>Images</Text>
+              </TouchableOpacity>
+            </View>
+            {searchTab === 'messages' && (
+              <View style={styles.searchBarRow}>
+                <TextInput
+                  style={[styles.searchInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                  placeholder="Search messages..."
+                  placeholderTextColor={colors.textSecondary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onSubmitEditing={async () => {
+                    if (!conversationId) return;
+                    setSearchLoading(true);
+                    const results = await searchMessages(String(conversationId), searchQuery);
+                    setSearchResults(results);
+                    setSearchLoading(false);
+                  }}
+                  returnKeyType="search"
+                />
+                <TouchableOpacity
+                  style={[styles.searchGoButton, { backgroundColor: colors.primary }]}
+                  onPress={async () => {
+                    if (!conversationId) return;
+                    setSearchLoading(true);
+                    const results = await searchMessages(String(conversationId), searchQuery);
+                    setSearchResults(results);
+                    setSearchLoading(false);
+                  }}
+                >
+                  <Search size={18} color={colors.card} />
+                </TouchableOpacity>
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              {searchTab === 'messages' ? (
+                searchLoading ? (
+                  <View style={styles.searchLoading}><ActivityIndicator /></View>
+                ) : (
+                  <FlatList
+                    data={searchResults}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.searchList}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[styles.searchMessageItem, { borderColor: colors.border, backgroundColor: colors.card }]}
+                        onPress={() => {
+                          setSearchVisible(false);
+                          // Optionally, we could scroll to the message here (needs indices mapping)
+                        }}
+                      >
+                        <Text style={[styles.searchMessageText, { color: colors.text }]}>{item.content}</Text>
+                        <Text style={[styles.searchMessageMeta, { color: colors.textSecondary }]}>{new Date(item.created_at).toLocaleString()}</Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                )
+              ) : (
+                searchLoading ? (
+                  <View style={styles.searchLoading}><ActivityIndicator /></View>
+                ) : (
+                  <FlatList
+                    data={searchResults}
+                    keyExtractor={(item) => item.id}
+                    numColumns={3}
+                    contentContainerStyle={styles.imageGrid}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity style={styles.imageTile} onPress={() => { setImageViewerUrl(item.metadata?.url); setImageViewerVisible(true); }}>
+                        <Image source={{ uri: item.metadata?.url }} style={styles.imageTileImg} />
+                      </TouchableOpacity>
+                    )}
+                  />
+                )
+              )}
+            </View>
+            {searchTab === 'images' && (
+              <TouchableOpacity
+                style={[styles.loadImagesButton, { backgroundColor: colors.primary }]}
+                onPress={async () => {
+                  if (!conversationId) return;
+                  setSearchLoading(true);
+                  const imgs = await listConversationImages(String(conversationId));
+                  setSearchResults(imgs);
+                  setSearchLoading(false);
+                }}
+              >
+                <Text style={[styles.loadImagesText, { color: colors.card }]}>Load Images</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Reaction Picker */}
       <Modal
@@ -631,6 +757,120 @@ const styles = StyleSheet.create({
   },
   reactionText: {
     fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  // Search UI styles
+  searchOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+  },
+  searchSheet: {
+    maxHeight: '75%',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 12,
+  },
+  searchHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  searchTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+  },
+  searchClose: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+  },
+  searchTabsRow: {
+    flexDirection: 'row',
+    gap: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
+  },
+  searchTab: {
+    paddingVertical: 8,
+  },
+  searchTabActive: {
+    borderBottomWidth: 2,
+  },
+  searchTabText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+  },
+  searchBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+  },
+  searchGoButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchList: {
+    paddingVertical: 8,
+    gap: 8,
+  },
+  searchMessageItem: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  searchMessageText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    marginBottom: 4,
+  },
+  searchMessageMeta: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+  },
+  imageGrid: {
+    gap: 6,
+    paddingVertical: 8,
+  },
+  imageTile: {
+    width: '31%',
+    aspectRatio: 1,
+    margin: '1%',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  imageTileImg: {
+    width: '100%',
+    height: '100%',
+  },
+  loadImagesButton: {
+    marginTop: 8,
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  loadImagesText: {
+    fontSize: 14,
     fontFamily: 'Inter-Medium',
   },
   messageTime: {
