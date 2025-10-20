@@ -34,6 +34,18 @@ export default function SearchScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { width } = useWindowDimensions();
+  // Grid sizing for web/tablets: keep cards comfortably wide on large screens
+  const columns = width >= 800 ? 2 : 1;
+  const gridPadding = width >= 800 ? 24 : 12;
+  const gutter = 16;
+  const cardWidth = useMemo(() => {
+    if (columns > 1) {
+      const available = width - gridPadding * 2 - gutter * (columns - 1);
+      // Clamp to a reasonable max for readability
+      return Math.min(560, Math.floor(available / columns));
+    }
+    return Math.min(680, width - gridPadding * 2);
+  }, [width, columns]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'lost' | 'found'>('all');
   const [selectedItemCategory, setSelectedItemCategory] = useState<string>('all');
@@ -295,6 +307,7 @@ export default function SearchScreen() {
 
   const renderSearchResult = useCallback(({ item, index }: { item: SearchResult; index: number }) => (
     <InlineAnimated index={index}>
+      <View style={{ width: cardWidth, marginHorizontal: columns > 1 ? gutter / 2 : 0 }}>
       <TouchableOpacity 
         style={[styles.resultCard, { backgroundColor: colors.card, borderColor: colors.border }]}
         onPress={() => {
@@ -490,12 +503,14 @@ export default function SearchScreen() {
         </TouchableOpacity>
       </View>
       </TouchableOpacity>
+      </View>
     </InlineAnimated>
-  ), [colors, handleViewComments, toggleLike]);
+  ), [colors, handleViewComments, toggleLike, cardWidth, columns]);
 
   const keyExtractor = useCallback((item: SearchResult) => item.id, []);
 
   const SkeletonCard = () => (
+    <View style={{ width: cardWidth, marginHorizontal: columns > 1 ? gutter / 2 : 0 }}>
     <View style={[styles.resultCard, styles.resultCardGridAware, { backgroundColor: colors.card, borderColor: colors.border }]}> 
       <View style={{ padding: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
         <View style={[styles.avatar, { backgroundColor: colors.surface }]} />
@@ -512,6 +527,7 @@ export default function SearchScreen() {
         <View style={{ height: 12 }} />
         <View style={[styles.singleImage, { borderColor: colors.border, backgroundColor: colors.surface }]} />
       </View>
+    </View>
     </View>
   );
 
@@ -676,10 +692,10 @@ export default function SearchScreen() {
         data={loading && !hasSearched ? Array.from({ length: 5 }, (_, i) => ({ id: `skeleton-${i}` } as any)) : searchResults}
         renderItem={loading && !hasSearched ? (() => <SkeletonCard />) as any : renderSearchResult}
         keyExtractor={loading && !hasSearched ? ((item: any) => item.id) : keyExtractor}
-        contentContainerStyle={styles.resultsContainer}
+        contentContainerStyle={[styles.resultsContainer, { paddingHorizontal: gridPadding, alignItems: 'center' }]}
         showsVerticalScrollIndicator={false}
-        numColumns={width >= 900 ? 3 : width >= 600 ? 2 : 1}
-        columnWrapperStyle={width >= 600 ? styles.resultsRow : undefined}
+        numColumns={columns}
+        columnWrapperStyle={columns > 1 ? styles.resultsRow : undefined}
         initialNumToRender={6}
         windowSize={7}
         maxToRenderPerBatch={8}
