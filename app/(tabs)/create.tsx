@@ -22,6 +22,7 @@ export default function CreatePostScreen() {
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
 
   const availableItemCategories = [
     'Electronics',
@@ -58,9 +59,9 @@ export default function CreatePostScreen() {
     return `${year}-${month}-${day}`;
   };
 
-  const pickImages = async () => {
+  const pickFromLibrary = async () => {
     // Check current permission status
-    const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       // Ask for permission if possible
       const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -81,10 +82,11 @@ export default function CreatePostScreen() {
     }
 
     try {
+      const remaining = Math.max(0, 5 - images.length);
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false, // Disable editing for multiple images
-        allowsMultipleSelection: true, // Enable multiple selection
+        allowsEditing: false,
+        allowsMultipleSelection: true,
         quality: 0.8,
       });
 
@@ -97,26 +99,50 @@ export default function CreatePostScreen() {
         return;
       }
 
-      // Add new images to existing ones (max 5 images)
-      const newImages = result.assets.map(asset => asset.uri);
-      const totalImages = images.length + newImages.length;
-      
-      if (totalImages > 5) {
-        Toast.show({
-          type: 'error',
-          text1: 'Too Many Images',
-          text2: 'You can only upload up to 5 images per post.',
-        });
-        return;
+      const picked = result.assets.map(asset => asset.uri).slice(0, remaining);
+      if (picked.length === 0) {
+        Toast.show({ type: 'info', text1: 'Limit reached', text2: 'Maximum of 5 images per post.' });
+      } else {
+        setImages(prev => [...prev, ...picked]);
       }
-
-      setImages(prev => [...prev, ...newImages]);
     } catch (error) {
       Toast.show({
         type: 'error',
         text1: 'Image Picker Error',
         text2: error instanceof Error ? error.message : 'Failed to pick images.',
       });
+    }
+  };
+
+  const takePhoto = async () => {
+    // Request camera permissions
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission needed',
+        'Camera access is required to take a photo.',
+        [
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+      return;
+    }
+    try {
+      if (images.length >= 5) {
+        Toast.show({ type: 'info', text1: 'Limit reached', text2: 'Maximum of 5 images per post.' });
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const uri = result.assets[0].uri;
+      setImages(prev => prev.length < 5 ? [...prev, uri] : prev);
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Camera Error', text2: error instanceof Error ? error.message : 'Failed to take photo.' });
     }
   };
 
@@ -415,7 +441,7 @@ export default function CreatePostScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Photos (Max 5)</Text>
           <TouchableOpacity
             style={[styles.imagePickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={pickImages}
+            onPress={() => setMediaPickerVisible(true)}
           >
             {images.length > 0 ? (
               <View style={styles.imagesGrid}>
@@ -431,12 +457,12 @@ export default function CreatePostScreen() {
                   </View>
                 ))}
                 {images.length < 5 && (
-                  <View style={[styles.addMoreButton, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <TouchableOpacity onPress={() => setMediaPickerVisible(true)} style={[styles.addMoreButton, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
                     <Camera size={24} color={colors.textSecondary} />
-                    <Text style={[styles.addMoreText, { color: colors.textSecondary }]}>
+                    <Text style={[styles.addMoreText, { color: colors.textSecondary }]}> 
                       Add More
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 )}
               </View>
             ) : (
@@ -593,6 +619,21 @@ export default function CreatePostScreen() {
             )}
           </View>
         </SafeAreaView>
+      </Modal>
+
+      {/* Media Picker Modal */}
+      <Modal visible={mediaPickerVisible} transparent animationType="fade" onRequestClose={() => setMediaPickerVisible(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setMediaPickerVisible(false)}>
+          <View style={[{ padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderWidth: 1 }, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            <Text style={{ fontFamily: 'Inter-SemiBold', fontSize: 16, color: colors.text, marginBottom: 12 }}>Add Photos</Text>
+            <TouchableOpacity style={[{ paddingVertical: 12, borderRadius: 10, borderWidth: 1, alignItems: 'center', marginBottom: 8 }, { borderColor: colors.border, backgroundColor: colors.card }]} onPress={async () => { setMediaPickerVisible(false); await takePhoto(); }}>
+              <Text style={{ color: colors.text }}>Take Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[{ paddingVertical: 12, borderRadius: 10, borderWidth: 1, alignItems: 'center' }, { borderColor: colors.border, backgroundColor: colors.card }]} onPress={async () => { setMediaPickerVisible(false); await pickFromLibrary(); }}>
+              <Text style={{ color: colors.text }}>Choose from Library</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
