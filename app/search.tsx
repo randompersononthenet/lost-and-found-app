@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, Modal } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, Modal, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,6 +33,7 @@ interface SearchResult {
 export default function SearchScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'lost' | 'found'>('all');
   const [selectedItemCategory, setSelectedItemCategory] = useState<string>('all');
@@ -43,8 +44,7 @@ export default function SearchScreen() {
   const [userProfileModalVisible, setUserProfileModalVisible] = useState(false);
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   const [loadingUserProfile, setLoadingUserProfile] = useState(false);
-  const [itemCategoryModalVisible, setItemCategoryModalVisible] = useState(false);
-  const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [filtersModalVisible, setFiltersModalVisible] = useState(false);
 
   const categories = [
     { key: 'all', label: 'All Items' },
@@ -121,24 +121,20 @@ export default function SearchScreen() {
 
       if (error) throw error;
 
-      // Check if user liked each post
-      const resultsWithLikes = await Promise.all(
-        (data || []).map(async (post) => {
-          const { data: userLike } = await supabase
-            .from('likes')
-            .select('id')
-            .eq('post_id', post.id)
-            .eq('user_id', user!.id)
-            .single();
-
-          return {
-            ...post,
-            user_liked: !!userLike,
-          } as SearchResult;
-        })
-      );
-
-      setSearchResults(resultsWithLikes);
+      // Avoid N+1: fetch user likes for all returned post IDs in a single query
+      const posts = (data || []) as any[];
+      if (user && posts.length > 0) {
+        const postIds = posts.map(p => p.id);
+        const { data: userLikes } = await supabase
+          .from('likes')
+          .select('post_id')
+          .in('post_id', postIds)
+          .eq('user_id', user.id);
+        const likedSet = new Set((userLikes || []).map(l => l.post_id));
+        setSearchResults(posts.map(p => ({ ...p, user_liked: likedSet.has(p.id) })));
+      } else {
+        setSearchResults(posts as any);
+      }
     } catch (error) {
       console.error('Error searching posts:', error);
     } finally {
@@ -249,7 +245,7 @@ export default function SearchScreen() {
     }
   };
 
-  const renderSearchResult = ({ item }: { item: SearchResult }) => (
+  const renderSearchResult = useCallback(({ item }: { item: SearchResult }) => (
     <TouchableOpacity 
       style={[styles.resultCard, { backgroundColor: colors.card, borderColor: colors.border }]}
       onPress={() => {
@@ -445,6 +441,28 @@ export default function SearchScreen() {
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
+  ), [colors, handleViewComments, toggleLike]);
+
+  const keyExtractor = useCallback((item: SearchResult) => item.id, []);
+
+  const SkeletonCard = () => (
+    <View style={[styles.resultCard, styles.resultCardGridAware, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+      <View style={{ padding: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={[styles.avatar, { backgroundColor: colors.surface }]} />
+        <View style={{ flex: 1, gap: 6 }}>
+          <View style={[styles.skeletonLine, { backgroundColor: colors.surface, width: '40%' }]} />
+          <View style={[styles.skeletonLine, { backgroundColor: colors.surface, width: '20%' }]} />
+        </View>
+        <View style={[styles.categoryBadge, { backgroundColor: colors.surface, width: 60, height: 22 }]} />
+      </View>
+      <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+        <View style={[styles.skeletonLine, { backgroundColor: colors.surface, width: '70%', height: 16, marginBottom: 8 }]} />
+        <View style={[styles.skeletonLine, { backgroundColor: colors.surface, width: '100%', height: 12, marginBottom: 6 }]} />
+        <View style={[styles.skeletonLine, { backgroundColor: colors.surface, width: '85%', height: 12 }]} />
+        <View style={{ height: 12 }} />
+        <View style={[styles.singleImage, { borderColor: colors.border, backgroundColor: colors.surface }]} />
+      </View>
+    </View>
   );
 
   return (
@@ -472,6 +490,15 @@ export default function SearchScreen() {
             onSubmitEditing={performSearch}
             returnKeyType="search"
           />
+          <TouchableOpacity
+            style={[styles.filtersButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            onPress={() => setFiltersModalVisible(true)}
+          >
+            <Filter size={18} color={colors.textSecondary} />
+            <Text style={[styles.filtersButtonText, { color: colors.text }]}>
+              Filters
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <FlatList
@@ -504,156 +531,114 @@ export default function SearchScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesContainer}
         />
-      </View>
 
-      {/* Filters Row: Item Category + Status */}
-      <View style={[styles.filtersRow, { borderBottomColor: colors.border }]}>
-        <View style={styles.filterColumn}>
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Item Type:</Text>
-          <TouchableOpacity
-            style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => setItemCategoryModalVisible(true)}
-          >
-            <Text style={[styles.dropdownText, { color: colors.text }]} numberOfLines={1}>
-              {getItemCategoryLabel(selectedItemCategory)}
-            </Text>
-            <ChevronDown size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.filterColumn}>
-          <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Status:</Text>
-          <TouchableOpacity
-            style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => setStatusModalVisible(true)}
-          >
-            <Text style={[styles.dropdownText, { color: colors.text }]} numberOfLines={1}>
-              {statusOptions.find(opt => opt.key === selectedStatus)?.label || 'All Status'}
-            </Text>
-            <ChevronDown size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+        {/* Active filter chips */}
+        <View style={styles.chipsRow}>
+          {selectedCategory !== 'all' && (
+            <TouchableOpacity style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setSelectedCategory('all')}>
+              <Text style={[styles.chipText, { color: colors.text }]}>{categories.find(c=>c.key===selectedCategory)?.label}</Text>
+              <Text style={[styles.chipClose, { color: colors.textSecondary }]}>×</Text>
+            </TouchableOpacity>
+          )}
+          {selectedItemCategory !== 'all' && (
+            <TouchableOpacity style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setSelectedItemCategory('all')}>
+              <Text style={[styles.chipText, { color: colors.text }]}>{getItemCategoryLabel(selectedItemCategory)}</Text>
+              <Text style={[styles.chipClose, { color: colors.textSecondary }]}>×</Text>
+            </TouchableOpacity>
+          )}
+          {selectedStatus !== 'all' && (
+            <TouchableOpacity style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setSelectedStatus('all')}>
+              <Text style={[styles.chipText, { color: colors.text }]}>{statusOptions.find(s=>s.key===selectedStatus)?.label}</Text>
+              <Text style={[styles.chipClose, { color: colors.textSecondary }]}>×</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      {/* Item Category Modal */}
+      {/* Filters Modal */}
       <Modal
-        visible={itemCategoryModalVisible}
+        visible={filtersModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setItemCategoryModalVisible(false)}
+        onRequestClose={() => setFiltersModalVisible(false)}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setItemCategoryModalVisible(false)}
+          onPress={() => setFiltersModalVisible(false)}
         >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Item Type</Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}
+            onStartShouldSetResponder={() => true}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Filters</Text>
+            <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Item Type</Text>
             {itemCategories.map((category) => (
               <TouchableOpacity
                 key={category.key}
-                style={[
-                  styles.modalOption,
-                  { borderBottomColor: colors.border }
-                ]}
-                onPress={() => {
-                  setSelectedItemCategory(category.key);
-                  setItemCategoryModalVisible(false);
-                }}
+                style={[styles.modalOption, { borderBottomColor: colors.border }]}
+                onPress={() => setSelectedItemCategory(category.key)}
               >
-                <Text style={[
-                  styles.modalOptionText,
-                  { 
-                    color: selectedItemCategory === category.key ? colors.primary : colors.text 
-                  }
-                ]}>
+                <Text style={[styles.modalOptionText, { color: selectedItemCategory === category.key ? colors.primary : colors.text }]}>
                   {category.label}
                 </Text>
-                {selectedItemCategory === category.key && (
-                  <View style={[styles.checkmark, { backgroundColor: colors.primary }]} />
-                )}
+                {selectedItemCategory === category.key && (<View style={[styles.checkmark, { backgroundColor: colors.primary }]} />)}
               </TouchableOpacity>
             ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Status Filter Modal */}
-      <Modal
-        visible={statusModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setStatusModalVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setStatusModalVisible(false)}
-        >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Status</Text>
+            <View style={{ height: 12 }} />
+            <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Status</Text>
             {statusOptions.map((option) => (
               <TouchableOpacity
                 key={option.key}
-                style={[
-                  styles.modalOption,
-                  { borderBottomColor: colors.border }
-                ]}
-                onPress={() => {
-                  setSelectedStatus(option.key as 'all' | 'active' | 'resolved' | 'claimed');
-                  setStatusModalVisible(false);
-                }}
+                style={[styles.modalOption, { borderBottomColor: colors.border }]}
+                onPress={() => setSelectedStatus(option.key as any)}
               >
-                <Text style={[
-                  styles.modalOptionText,
-                  { 
-                    color: selectedStatus === option.key ? colors.primary : colors.text 
-                  }
-                ]}>
+                <Text style={[styles.modalOptionText, { color: selectedStatus === option.key ? colors.primary : colors.text }]}>
                   {option.label}
                 </Text>
-                {selectedStatus === option.key && (
-                  <View style={[styles.checkmark, { backgroundColor: colors.primary }]} />
-                )}
+                {selectedStatus === option.key && (<View style={[styles.checkmark, { backgroundColor: colors.primary }]} />)}
               </TouchableOpacity>
             ))}
+            <View style={{ height: 16 }} />
+            <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
+              <TouchableOpacity onPress={() => { setSelectedItemCategory('all'); setSelectedStatus('all'); }}>
+                <Text style={{ color: colors.textSecondary }}>Reset</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setFiltersModalVisible(false)}>
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>Apply</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </TouchableOpacity>
       </Modal>
 
+      
+
       <FlatList
-        data={searchResults}
-        renderItem={renderSearchResult}
-        keyExtractor={(item) => item.id}
+        data={loading && !hasSearched ? Array.from({ length: 5 }, (_, i) => ({ id: `skeleton-${i}` } as any)) : searchResults}
+        renderItem={loading && !hasSearched ? (() => <SkeletonCard />) as any : renderSearchResult}
+        keyExtractor={loading && !hasSearched ? ((item: any) => item.id) : keyExtractor}
         contentContainerStyle={styles.resultsContainer}
         showsVerticalScrollIndicator={false}
+        numColumns={width >= 900 ? 3 : width >= 600 ? 2 : 1}
+        columnWrapperStyle={width >= 600 ? styles.resultsRow : undefined}
+        initialNumToRender={6}
+        windowSize={7}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={16}
+        removeClippedSubviews
         ListEmptyComponent={
           <View style={styles.emptyState}>
             {!hasSearched ? (
               <>
                 <Search size={48} color={colors.textSecondary} />
-                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-                  Start Searching
-                </Text>
-                <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-                  Search for lost or found items by typing keywords above
-                </Text>
-              </>
-            ) : loading ? (
-              <>
-                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-                  Searching...
-                </Text>
+                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>Start Searching</Text>
+                <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>Search for lost or found items by typing keywords above</Text>
               </>
             ) : (
               <>
                 <Filter size={48} color={colors.textSecondary} />
-                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-                  No Results Found
-                </Text>
-                <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-                  Try adjusting your search terms or filters
-                </Text>
+                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>No Results Found</Text>
+                <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>Try adjusting your search terms or filters</Text>
               </>
             )}
           </View>
@@ -706,6 +691,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 16,
   },
+  filtersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginLeft: 8,
+  },
+  filtersButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+  },
   searchInput: {
     flex: 1,
     marginLeft: 12,
@@ -737,15 +736,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Medium',
   },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingTop: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 9999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  chipText: {
+    fontSize: 13,
+    fontFamily: 'Inter-Medium',
+  },
+  chipClose: {
+    fontSize: 16,
+    marginLeft: 2,
+  },
   resultsContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingBottom: 20,
+  },
+  resultsRow: {
+    gap: 12,
+    paddingHorizontal: 4,
   },
   resultCard: {
     marginBottom: 12,
     borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
+  },
+  resultCardGridAware: {
+    flex: 1,
   },
   resultHeader: {
     flexDirection: 'row',
@@ -903,6 +932,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Bold',
     color: 'white',
+  },
+  skeletonLine: {
+    height: 10,
+    borderRadius: 6,
   },
   resultActions: {
     flexDirection: 'row',

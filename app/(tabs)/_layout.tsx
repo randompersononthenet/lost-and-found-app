@@ -2,10 +2,14 @@ import { Tabs } from 'expo-router';
 import { Chrome as Home, Plus, MessageCircle, User, Bell } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { Platform, useWindowDimensions } from 'react-native';
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const { unreadCount } = useNotifications();
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const hideTabs = isWeb && width >= 1024; // hide on wide web
 
   return (
     <Tabs
@@ -13,28 +17,30 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          height: 70,
-          paddingBottom: 12,
-          paddingTop: 8,
-          borderTopWidth: 1,
-          shadowColor: '#000',
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: -2 },
-          elevation: 6,
-        },
+        tabBarStyle: hideTabs
+          ? { display: 'none' }
+          : {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+              height: isWeb ? 56 : 70,
+              paddingBottom: isWeb ? 6 : 12,
+              paddingTop: isWeb ? 6 : 8,
+              borderTopWidth: 1,
+              shadowColor: '#000',
+              shadowOpacity: isWeb ? 0.03 : 0.06,
+              shadowRadius: isWeb ? 4 : 8,
+              shadowOffset: { width: 0, height: -2 },
+              elevation: isWeb ? 2 : 6,
+            },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: isWeb ? 11 : 12,
           fontWeight: '600',
           marginTop: 2,
         },
         tabBarItemStyle: {
           alignItems: 'center',
           justifyContent: 'center',
-          paddingVertical: 6,
+          paddingVertical: isWeb ? 4 : 6,
         },
         tabBarBadgeStyle: {
           backgroundColor: colors.accent,
