@@ -160,7 +160,27 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         })
       );
 
-      setConversations(transformedConversations);
+      // Deduplicate by participant set (excluding current user), prefer the latest last_message_at
+      const byParticipantKey = new Map<string, any>();
+      for (const conv of transformedConversations) {
+        const key = (conv.participants || [])
+          .map((p: any) => p.user_id)
+          .sort()
+          .join('|');
+        const existing = byParticipantKey.get(key);
+        if (!existing) {
+          byParticipantKey.set(key, conv);
+        } else {
+          const a = new Date(existing.last_message_at || existing.updated_at || existing.created_at || 0).getTime();
+          const b = new Date(conv.last_message_at || conv.updated_at || conv.created_at || 0).getTime();
+          if (b > a) byParticipantKey.set(key, conv);
+        }
+      }
+      const uniqueConversations = Array.from(byParticipantKey.values()).sort((a: any, b: any) => 
+        new Date(b.last_message_at || b.updated_at || b.created_at || 0).getTime() -
+        new Date(a.last_message_at || a.updated_at || a.created_at || 0).getTime()
+      );
+      setConversations(uniqueConversations);
     } catch (error) {
       console.error('Error loading conversations:', error);
       Toast.show({
