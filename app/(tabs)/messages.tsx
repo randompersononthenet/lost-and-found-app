@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessaging } from '@/contexts/MessagingContext';
 import { supabase } from '@/lib/supabase';
-import { Search, Filter, MapPin, Calendar, Heart, MessageCircle, Plus, Search as SearchIcon } from 'lucide-react-native';
+import { Search, Filter, MapPin, Calendar, Heart, MessageCircle, Plus, Search as SearchIcon, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
@@ -19,7 +19,7 @@ interface UserSearchResult {
 export default function MessagesScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const { conversations, loading, loadConversations, createConversation } = useMessaging();
+  const { conversations, loading, loadConversations, createConversation, deleteConversation } = useMessaging();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -180,6 +180,24 @@ export default function MessagesScreen() {
           >
             {item.last_message_content || 'No messages yet'}
           </Text>
+        </View>
+        <View style={styles.conversationFooter}>
+          <TouchableOpacity
+            style={[styles.deleteButton, { borderColor: colors.border }]}
+            onPress={() => {
+              Alert.alert(
+                'Delete Conversation',
+                'This will permanently delete the entire conversation for you. Continue?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete', style: 'destructive', onPress: () => deleteConversation(item.id) },
+                ]
+              );
+            }}
+          >
+            <Trash2 size={16} color={colors.textSecondary} />
+            <Text style={[styles.deleteText, { color: colors.textSecondary }]}>Delete</Text>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
@@ -395,6 +413,25 @@ const styles = StyleSheet.create({
   conversationContent: {
     paddingHorizontal: 16,
     paddingBottom: 12,
+  },
+  conversationFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  deleteText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
   },
   lastMessage: {
     fontSize: 14,

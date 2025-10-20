@@ -50,6 +50,7 @@ interface MessagingContextType {
   setCurrentConversation: (conversation: Conversation | null) => void;
   markConversationAsRead: (conversationId: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
+  deleteConversation: (conversationId: string) => Promise<void>;
   // Typing indicators
   setTyping: (conversationId: string, isTyping: boolean) => void;
   isAnyoneTyping: boolean;
@@ -192,6 +193,42 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setLoading(false);
     }
   }, [user]);
+
+  // Delete an entire conversation (all messages, participants, then the conversation itself)
+  const deleteConversation = useCallback(async (conversationId: string) => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      // Remove messages
+      await supabase
+        .from('messages')
+        .delete()
+        .eq('conversation_id', conversationId);
+      // Remove participants
+      await supabase
+        .from('conversation_participants')
+        .delete()
+        .eq('conversation_id', conversationId);
+      // Remove conversation
+      await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId);
+
+      // Update local state
+      setConversations(prev => prev.filter(c => c.id !== conversationId));
+      if (currentConversation?.id === conversationId) {
+        setCurrentConversation(null);
+        setMessages([]);
+      }
+      Toast.show({ type: 'success', text1: 'Conversation deleted' });
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      Toast.show({ type: 'error', text1: 'Delete failed', text2: 'Could not delete conversation' });
+    } finally {
+      setLoading(false);
+    }
+  }, [user, currentConversation]);
 
   // --- Read receipts: load participants' last_read_at for current conversation ---
   const loadParticipantsReadMap = useCallback(async (conversationId: string) => {
@@ -859,6 +896,7 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCurrentConversation,
     markConversationAsRead,
     deleteMessage,
+    deleteConversation,
     setTyping,
     isAnyoneTyping,
     participantsReadMap,
