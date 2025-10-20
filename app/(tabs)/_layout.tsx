@@ -49,6 +49,7 @@ export default function TabLayout() {
           : undefined,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
+        tabBarShowLabel: false,
         tabBarStyle: hideTabs
           ? { display: 'none' }
           : {
@@ -64,11 +65,7 @@ export default function TabLayout() {
               shadowOffset: { width: 0, height: -2 },
               elevation: isWeb ? 2 : 6,
             },
-        tabBarLabelStyle: {
-          fontSize: isWeb ? 11 : 12,
-          fontWeight: '600',
-          marginTop: 2,
-        },
+        tabBarLabelStyle: undefined,
         tabBarItemStyle: {
           alignItems: 'center',
           justifyContent: 'center',
