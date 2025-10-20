@@ -1,8 +1,10 @@
 import { Tabs } from 'expo-router';
-import { Chrome as Home, Plus, MessageCircle, User, Bell } from 'lucide-react-native';
+import { Chrome as Home, Plus, MessageCircle, User, Bell, Search as SearchIcon } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { Platform, useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions, View, Text } from 'react-native';
+import { TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 
 export default function TabLayout() {
   const { colors } = useTheme();
@@ -14,7 +16,37 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: hideTabs,
+        header: hideTabs
+          ? () => (
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: 20,
+                paddingVertical: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.border,
+                backgroundColor: colors.surface,
+              }}>
+                <Text style={{ color: colors.text, fontFamily: 'Inter-Bold', fontSize: 18 }}>RECLAIM</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity onPress={() => router.push('/search')} style={{ padding: 8, marginRight: 4 }}>
+                    <SearchIcon size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => router.push('/(tabs)/create')} style={{ padding: 8, marginRight: 4 }}>
+                    <Plus size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => router.push('/(tabs)/messages')} style={{ padding: 8, marginRight: 4 }}>
+                    <MessageCircle size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={{ padding: 8 }}>
+                    <User size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )
+          : undefined,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: hideTabs

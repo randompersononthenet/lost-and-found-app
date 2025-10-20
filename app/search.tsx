@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, Modal, useWindowDimensions } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, Modal, useWindowDimensions, Platform, UIManager, LayoutAnimation, Animated, Easing } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,6 +45,34 @@ export default function SearchScreen() {
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   const [loadingUserProfile, setLoadingUserProfile] = useState(false);
   const [filtersModalVisible, setFiltersModalVisible] = useState(false);
+  const modalAnim = useRef(new Animated.Value(0)).current;
+
+  // Enable LayoutAnimation on Android
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
+
+  // Animate modal content when visibility changes
+  useEffect(() => {
+    if (filtersModalVisible) {
+      modalAnim.setValue(0);
+      Animated.timing(modalAnim, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(modalAnim, {
+        toValue: 0,
+        duration: 140,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [filtersModalVisible]);
 
   const categories = [
     { key: 'all', label: 'All Items' },
@@ -131,8 +159,10 @@ export default function SearchScreen() {
           .in('post_id', postIds)
           .eq('user_id', user.id);
         const likedSet = new Set((userLikes || []).map(l => l.post_id));
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setSearchResults(posts.map(p => ({ ...p, user_liked: likedSet.has(p.id) })));
       } else {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setSearchResults(posts as any);
       }
     } catch (error) {
@@ -245,14 +275,33 @@ export default function SearchScreen() {
     }
   };
 
-  const renderSearchResult = useCallback(({ item }: { item: SearchResult }) => (
-    <TouchableOpacity 
-      style={[styles.resultCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => {
-        // Navigate to post detail or comments
-        handleViewComments(item.id);
-      }}
-    >
+  const InlineAnimated: React.FC<{ index: number; children: React.ReactNode }> = ({ index, children }) => {
+    const a = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+      Animated.timing(a, {
+        toValue: 1,
+        duration: 200,
+        delay: Math.min(index, 6) * 30,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }, [index]);
+    return (
+      <Animated.View style={{ opacity: a, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}>
+        {children}
+      </Animated.View>
+    );
+  };
+
+  const renderSearchResult = useCallback(({ item, index }: { item: SearchResult; index: number }) => (
+    <InlineAnimated index={index}>
+      <TouchableOpacity 
+        style={[styles.resultCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        onPress={() => {
+          // Navigate to post detail or comments
+          handleViewComments(item.id);
+        }}
+      >
       {/* Post Header */}
       <View style={styles.resultHeader}>
         <TouchableOpacity 
@@ -440,7 +489,8 @@ export default function SearchScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </InlineAnimated>
   ), [colors, handleViewComments, toggleLike]);
 
   const keyExtractor = useCallback((item: SearchResult) => item.id, []);
@@ -492,7 +542,10 @@ export default function SearchScreen() {
           />
           <TouchableOpacity
             style={[styles.filtersButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => setFiltersModalVisible(true)}
+            onPress={() => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              setFiltersModalVisible(true);
+            }}
           >
             <Filter size={18} color={colors.textSecondary} />
             <Text style={[styles.filtersButtonText, { color: colors.text }]}>
@@ -535,19 +588,19 @@ export default function SearchScreen() {
         {/* Active filter chips */}
         <View style={styles.chipsRow}>
           {selectedCategory !== 'all' && (
-            <TouchableOpacity style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setSelectedCategory('all')}>
+            <TouchableOpacity style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setSelectedCategory('all'); }}>
               <Text style={[styles.chipText, { color: colors.text }]}>{categories.find(c=>c.key===selectedCategory)?.label}</Text>
               <Text style={[styles.chipClose, { color: colors.textSecondary }]}>×</Text>
             </TouchableOpacity>
           )}
           {selectedItemCategory !== 'all' && (
-            <TouchableOpacity style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setSelectedItemCategory('all')}>
+            <TouchableOpacity style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setSelectedItemCategory('all'); }}>
               <Text style={[styles.chipText, { color: colors.text }]}>{getItemCategoryLabel(selectedItemCategory)}</Text>
               <Text style={[styles.chipClose, { color: colors.textSecondary }]}>×</Text>
             </TouchableOpacity>
           )}
           {selectedStatus !== 'all' && (
-            <TouchableOpacity style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setSelectedStatus('all')}>
+            <TouchableOpacity style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setSelectedStatus('all'); }}>
               <Text style={[styles.chipText, { color: colors.text }]}>{statusOptions.find(s=>s.key===selectedStatus)?.label}</Text>
               <Text style={[styles.chipClose, { color: colors.textSecondary }]}>×</Text>
             </TouchableOpacity>
@@ -560,14 +613,20 @@ export default function SearchScreen() {
         visible={filtersModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setFiltersModalVisible(false)}
+        onRequestClose={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setFiltersModalVisible(false); }}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setFiltersModalVisible(false)}
+          onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setFiltersModalVisible(false); }}
         >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          <Animated.View style={[
+            styles.modalContent,
+            { backgroundColor: colors.surface,
+              opacity: modalAnim,
+              transform: [{ translateY: modalAnim.interpolate({ inputRange: [0,1], outputRange: [12, 0] }) }]
+            }
+          ]}
             onStartShouldSetResponder={() => true}
           >
             <Text style={[styles.modalTitle, { color: colors.text }]}>Filters</Text>
@@ -600,14 +659,14 @@ export default function SearchScreen() {
             ))}
             <View style={{ height: 16 }} />
             <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
-              <TouchableOpacity onPress={() => { setSelectedItemCategory('all'); setSelectedStatus('all'); }}>
+              <TouchableOpacity onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setSelectedItemCategory('all'); setSelectedStatus('all'); }}>
                 <Text style={{ color: colors.textSecondary }}>Reset</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setFiltersModalVisible(false)}>
+              <TouchableOpacity onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setFiltersModalVisible(false); }}>
                 <Text style={{ color: colors.primary, fontWeight: '600' }}>Apply</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </TouchableOpacity>
       </Modal>
 
@@ -984,16 +1043,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
     minWidth: 70,
   },
-  dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minWidth: 120,
-  },
   dropdownText: {
     fontSize: 14,
     fontWeight: '500',
@@ -1043,44 +1092,5 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-  },
-  filtersRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
-    borderBottomWidth: 1,
-  },
-  filterColumn: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: 6,
-  },
-  dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    minWidth: 0,
-  },
-  dropdownText: {
-    fontSize: 13,
-    fontWeight: '500',
-    flex: 1,
-    minWidth: 0,
-    marginRight: 8,
-  },
-  filterLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginRight: 0,
-    minWidth: 0,
   },
 });
