@@ -23,33 +23,33 @@ interface ThemeContextType {
 }
 
 const lightColors: ThemeColors = {
-  primary: '#3B82F6',
-  secondary: '#8B5CF6',
-  accent: '#F97316',
-  background: '#FFFFFF',
-  surface: '#F8FAFC',
+  primary: '#2563EB',
+  secondary: '#475569',
+  accent: '#0EA5E9',
+  background: '#F9FAFB',
+  surface: '#FFFFFF',
   card: '#FFFFFF',
-  text: '#1F2937',
+  text: '#111827',
   textSecondary: '#6B7280',
   border: '#E5E7EB',
-  success: '#10B981',
+  success: '#16A34A',
   warning: '#F59E0B',
-  error: '#EF4444',
+  error: '#DC2626',
 };
 
 const darkColors: ThemeColors = {
   primary: '#3B82F6',
-  secondary: '#8B5CF6',
-  accent: '#F97316',
-  background: '#0F172A',
-  surface: '#1E293B',
-  card: '#334155',
-  text: '#F1F5F9',
-  textSecondary: '#94A3B8',
-  border: '#475569',
-  success: '#10B981',
+  secondary: '#94A3B8',
+  accent: '#22D3EE',
+  background: '#0B1220',
+  surface: '#111827',
+  card: '#1F2937',
+  text: '#F9FAFB',
+  textSecondary: '#9CA3AF',
+  border: '#374151',
+  success: '#22C55E',
   warning: '#F59E0B',
-  error: '#EF4444',
+  error: '#F43F5E',
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
