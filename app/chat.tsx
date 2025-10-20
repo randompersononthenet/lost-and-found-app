@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Image, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Image, Modal, ActivityIndicator, GestureResponderEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +46,8 @@ export default function ChatScreen() {
   const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
   const [reactionTargetId, setReactionTargetId] = useState<string | null>(null);
   const reactionOptions = ['👍','❤️','😂','😮','😢'];
+  // Reply-to state
+  const [replyingTo, setReplyingTo] = useState<any | null>(null);
   // Search UI state
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -132,8 +134,17 @@ export default function ChatScreen() {
 
     setSending(true);
     try {
-      await sendMessage(conversationId, newMessage);
+      const metadata = replyingTo ? {
+        reply_to: {
+          id: replyingTo.id,
+          content: replyingTo.content || (replyingTo.message_type === 'image' ? '[Image]' : ''),
+          message_type: replyingTo.message_type,
+          sender_id: replyingTo.sender_id,
+        }
+      } : undefined;
+      await sendMessage(conversationId, newMessage, metadata);
       setNewMessage('');
+      setReplyingTo(null);
       // Scroll to bottom after sending
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
@@ -252,10 +263,31 @@ export default function ChatScreen() {
   };
 
   const renderMessage = ({ item }: { item: any }) => (
-    <View style={[
+    <View
+      style={[
       styles.messageContainer,
       isOwnMessage(item) ? styles.ownMessage : styles.otherMessage
-    ]}>
+    ]}
+      onStartShouldSetResponder={() => true}
+      onResponderGrant={(e: GestureResponderEvent) => {
+        (e.nativeEvent as any)._startX = e.nativeEvent.pageX;
+        (e.nativeEvent as any)._startY = e.nativeEvent.pageY;
+        (e.nativeEvent as any)._swiped = false;
+      }}
+      onResponderMove={(e: GestureResponderEvent) => {
+        const sx = (e.nativeEvent as any)._startX || e.nativeEvent.pageX;
+        const sy = (e.nativeEvent as any)._startY || e.nativeEvent.pageY;
+        const dx = e.nativeEvent.pageX - sx;
+        const dy = e.nativeEvent.pageY - sy;
+        if (!((e.nativeEvent as any)._swiped) && dx > 36 && Math.abs(dy) < 24) {
+          (e.nativeEvent as any)._swiped = true;
+          if (!isOwnMessage(item)) {
+            setReplyingTo(item);
+            try { Haptics.selectionAsync(); } catch {}
+          }
+        }
+      }}
+    >
       <TouchableOpacity style={[
         styles.messageBubble,
         {
@@ -267,6 +299,27 @@ export default function ChatScreen() {
       ]}
       onLongPress={() => { setReactionTargetId(item.id); setReactionPickerVisible(true); }}
       >
+        {/* Quoted reply preview inside bubble (if this message is a reply) */}
+        {item.metadata?.reply_to && (
+          <TouchableOpacity
+            onPress={() => {
+              const idx = messages.findIndex(m => m.id === item.metadata.reply_to.id);
+              if (idx >= 0) {
+                try {
+                  flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
+                } catch {}
+                setHighlightId(item.metadata.reply_to.id);
+                setTimeout(() => setHighlightId(null), 1500);
+              }
+            }}
+            style={[styles.replyQuote, { borderColor: colors.border, backgroundColor: isOwnMessage(item) ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.04)' }]}
+          >
+            <Text style={[styles.replyQuoteLabel, { color: isOwnMessage(item) ? colors.card : colors.textSecondary }]}>Replying to</Text>
+            <Text style={[styles.replyQuoteText, { color: isOwnMessage(item) ? colors.card : colors.text }]} numberOfLines={1}>
+              {item.metadata.reply_to.message_type === 'image' ? '[Image]' : (item.metadata.reply_to.content || '')}
+            </Text>
+          </TouchableOpacity>
+        )}
         {item.message_type === 'image' && item.metadata?.url ? (
           <TouchableOpacity onPress={() => { setImageViewerUrl(item.metadata.url); setImageViewerVisible(true); }}>
             <Image source={{ uri: item.metadata.url }} style={styles.messageImage} resizeMode="cover" />
@@ -414,7 +467,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
       {renderChatHeader()}
 
       <KeyboardAvoidingView 
@@ -442,6 +495,18 @@ export default function ChatScreen() {
           }
         />
 
+        {/* Replying preview */}
+        {replyingTo && (
+          <View style={[styles.replyingBar, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            <Text style={[styles.replyingLabel, { color: colors.textSecondary }]}>Replying to</Text>
+            <Text style={[styles.replyingText, { color: colors.text }]} numberOfLines={1}>
+              {replyingTo.message_type === 'image' ? '[Image]' : (replyingTo.content || '')}
+            </Text>
+            <TouchableOpacity style={styles.replyingClose} onPress={() => setReplyingTo(null)}>
+              <Text style={{ color: colors.textSecondary }}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[styles.attachButton, { borderColor: colors.border, backgroundColor: colors.card }]}
@@ -744,6 +809,23 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
   },
+  replyQuote: {
+    borderLeftWidth: 2,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
+  },
+  replyQuoteLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter-Medium',
+    marginBottom: 2,
+  },
+  replyQuoteText: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+  },
   messageImage: {
     width: 220,
     height: 220,
@@ -902,6 +984,26 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 2,
+  },
+  replyingBar: {
+    borderTopWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  replyingLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    marginBottom: 2,
+  },
+  replyingText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+  },
+  replyingClose: {
+    position: 'absolute',
+    right: 10,
+    top: 8,
+    padding: 6,
   },
   inputContainer: {
     flexDirection: 'row',

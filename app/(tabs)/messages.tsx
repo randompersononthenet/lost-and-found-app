@@ -19,7 +19,7 @@ interface UserSearchResult {
 export default function MessagesScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const { conversations, loading, loadConversations, createConversation, deleteConversation } = useMessaging();
+  const { conversations, loading, loadConversations, createConversation, deleteConversation, leaveConversation, undoLeaveConversation } = useMessaging();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -197,6 +197,27 @@ export default function MessagesScreen() {
           >
             <Trash2 size={16} color={colors.textSecondary} />
             <Text style={[styles.deleteText, { color: colors.textSecondary }]}>Delete</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.leaveButton, { borderColor: colors.border }]}
+            onPress={() => {
+              Alert.alert(
+                'Leave Conversation',
+                'You will be removed from this conversation. You can undo immediately after.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Leave', style: 'destructive', onPress: async () => {
+                      await leaveConversation(item.id);
+                      Alert.alert('Left Conversation', 'Undo leaving this conversation?', [
+                        { text: 'Dismiss', style: 'cancel' },
+                        { text: 'Undo', onPress: () => undoLeaveConversation(item.id) },
+                      ]);
+                    } },
+                ]
+              );
+            }}
+          >
+            <Text style={[styles.leaveText, { color: colors.textSecondary }]}>Leave</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -430,6 +451,20 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   deleteText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  leaveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginLeft: 8,
+  },
+  leaveText: {
     fontSize: 12,
     fontFamily: 'Inter-Medium',
   },

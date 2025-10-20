@@ -41,7 +41,7 @@ interface MessagingContextType {
   currentConversation: Conversation | null;
   messages: Message[];
   loading: boolean;
-  sendMessage: (conversationId: string, content: string) => Promise<void>;
+  sendMessage: (conversationId: string, content: string, metadata?: any) => Promise<void>;
   sendImage: (conversationId: string, localUri: string) => Promise<void>;
   sendImages: (conversationId: string, localUris: string[]) => Promise<void>;
   createConversation: (participantIds: string[]) => Promise<string>;
@@ -51,6 +51,8 @@ interface MessagingContextType {
   markConversationAsRead: (conversationId: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
   deleteConversation: (conversationId: string) => Promise<void>;
+  leaveConversation: (conversationId: string) => Promise<void>;
+  undoLeaveConversation: (conversationId: string) => Promise<void>;
   // Typing indicators
   setTyping: (conversationId: string, isTyping: boolean) => void;
   isAnyoneTyping: boolean;
@@ -229,6 +231,42 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setLoading(false);
     }
   }, [user, currentConversation]);
+
+  // Leave a conversation (remove current user from participants)
+  const leaveConversation = useCallback(async (conversationId: string) => {
+    if (!user) return;
+    try {
+      await supabase
+        .from('conversation_participants')
+        .delete()
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user.id);
+      setConversations(prev => prev.filter(c => c.id !== conversationId));
+      if (currentConversation?.id === conversationId) {
+        setCurrentConversation(null);
+        setMessages([]);
+      }
+      Toast.show({ type: 'success', text1: 'Left conversation' });
+    } catch (e) {
+      console.error('leaveConversation error:', e);
+      Toast.show({ type: 'error', text1: 'Leave failed', text2: 'Unable to leave conversation' });
+    }
+  }, [user, currentConversation]);
+
+  // Undo leave (re-add current user as participant)
+  const undoLeaveConversation = useCallback(async (conversationId: string) => {
+    if (!user) return;
+    try {
+      await supabase
+        .from('conversation_participants')
+        .insert({ conversation_id: conversationId, user_id: user.id });
+      await loadConversations();
+      Toast.show({ type: 'success', text1: 'Rejoined conversation' });
+    } catch (e) {
+      console.error('undoLeaveConversation error:', e);
+      Toast.show({ type: 'error', text1: 'Rejoin failed', text2: 'Could not rejoin' });
+    }
+  }, [user, loadConversations]);
 
   // --- Read receipts: load participants' last_read_at for current conversation ---
   const loadParticipantsReadMap = useCallback(async (conversationId: string) => {
@@ -420,7 +458,7 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [user]);
 
   // Send a message
-  const sendMessage = useCallback(async (conversationId: string, content: string) => {
+  const sendMessage = useCallback(async (conversationId: string, content: string, metadata?: any) => {
     if (!user || !content.trim()) return;
 
     try {
@@ -431,6 +469,7 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           sender_id: user.id,
           content: content.trim(),
           message_type: 'text',
+          metadata: metadata || null,
         })
         .select()
         .single();
@@ -897,6 +936,8 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     markConversationAsRead,
     deleteMessage,
     deleteConversation,
+    leaveConversation,
+    undoLeaveConversation,
     setTyping,
     isAnyoneTyping,
     participantsReadMap,
