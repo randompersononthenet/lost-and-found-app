@@ -31,6 +31,9 @@ export default function TabLayout() {
               }}>
                 <Text style={{ color: colors.text, fontFamily: 'Inter-Bold', fontSize: 18 }}>RECLAIM</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity onPress={() => router.push('/(tabs)')} style={{ padding: 8, marginRight: 4 }}>
+                    <Home size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
                   <TouchableOpacity onPress={() => router.push('/search')} style={{ padding: 8, marginRight: 4 }}>
                     <SearchIcon size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
