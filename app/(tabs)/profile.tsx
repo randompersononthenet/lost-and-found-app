@@ -348,7 +348,7 @@ export default function ProfileScreen() {
       {/* Edit Profile Modal */}
       <Modal visible={editModalVisible} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}> 
-          <ResponsiveContainer>
+          <ResponsiveContainer variant="modal">
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
               <TouchableOpacity onPress={() => setEditModalVisible(false)}>
                 <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>

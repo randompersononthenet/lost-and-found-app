@@ -2,7 +2,9 @@ import React from 'react';
 import { Platform, useWindowDimensions, View } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
-export default function ResponsiveContainer({ children }: { children: React.ReactNode }) {
+type Variant = 'page' | 'modal';
+
+export default function ResponsiveContainer({ children, variant = 'page' }: { children: React.ReactNode; variant?: Variant }) {
   const { width } = useWindowDimensions();
   const { colors } = useTheme();
   const isWeb = Platform.OS === 'web';
@@ -14,6 +16,7 @@ export default function ResponsiveContainer({ children }: { children: React.Reac
   }
 
   const isConstrained = isWeb && maxWidth !== '100%';
+  const isFramed = isConstrained && variant !== 'modal';
 
   return (
     <View
@@ -22,12 +25,12 @@ export default function ResponsiveContainer({ children }: { children: React.Reac
         width: '100%',
         maxWidth,
         alignSelf: 'center',
-        // Subtle framing only on wide web layouts
-        borderWidth: isConstrained ? 1 : 0,
-        borderColor: isConstrained ? colors.border : 'transparent',
-        borderRadius: isConstrained ? 12 : 0,
-        paddingTop: isConstrained ? 8 : 0,
-        paddingHorizontal: isConstrained ? 12 : 0,
+        // Subtle framing only on wide web layouts for non-modal pages
+        borderWidth: isFramed ? 1 : 0,
+        borderColor: isFramed ? colors.border : 'transparent',
+        borderRadius: isFramed ? 12 : 0,
+        paddingTop: isFramed ? 8 : 0,
+        paddingHorizontal: isFramed ? 12 : 0,
       }}
     >
       {children}
