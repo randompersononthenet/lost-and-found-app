@@ -10,6 +10,7 @@ export default function Nav({ title, children }: { title: string, children: Reac
 	const { toggleTheme, isDark } = useTheme()
 	const { settings } = useAppSettings()
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+	const [confirmSignOut, setConfirmSignOut] = useState(false)
 
 	const navigationItems = [
 		{ path: '/', label: 'Dashboard', icon: Home },
@@ -65,7 +66,7 @@ export default function Nav({ title, children }: { title: string, children: Reac
 					</button>
 					<button 
 						className="nav-item sign-out" 
-						onClick={() => supabase.auth.signOut()}
+						onClick={() => setConfirmSignOut(true)}
 						title={sidebarCollapsed ? 'Sign Out' : undefined}
 					>
 						<LogOut size={20} />
@@ -88,6 +89,19 @@ export default function Nav({ title, children }: { title: string, children: Reac
 					{children}
 				</main>
 			</div>
+
+			{confirmSignOut && (
+				<div className="modal-overlay">
+					<div className="modal-card">
+						<h3 style={{ marginTop: 0 }}>Sign out</h3>
+						<p className="text-secondary">Are you sure you want to sign out?</p>
+						<div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+							<button className="action-btn" onClick={() => setConfirmSignOut(false)}>Cancel</button>
+							<button className="action-btn danger-btn" onClick={() => { setConfirmSignOut(false); supabase.auth.signOut() }}>Sign Out</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	)
 } 
