@@ -347,130 +347,94 @@ export default function ProfileScreen() {
 
       {/* Edit Profile Modal */}
       <Modal visible={editModalVisible} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-              <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Profile</Text>
-            <TouchableOpacity onPress={handleUpdateProfile}>
-              <Text style={[styles.modalSave, { color: colors.primary }]}>Save</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Full Name</Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={editForm.full_name}
-                onChangeText={(text) => setEditForm(prev => ({ ...prev, full_name: text }))}
-                placeholder="Enter your full name"
-                placeholderTextColor={colors.textSecondary}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Birthday</Text>
-              <TouchableOpacity
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                onPress={() => setDatePickerVisible(true)}
-              >
-                <View style={styles.pickerContainer}>
-                  <Text style={[styles.pickerText, { color: editForm.birthday ? colors.text : colors.textSecondary }]}>
-                    {editForm.birthday ? formatDateForDisplay(editForm.birthday) : 'Select birthday'}
-                  </Text>
-                  <Calendar size={20} color={colors.textSecondary} />
-                </View>
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}> 
+          <ResponsiveContainer>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Profile</Text>
+              <TouchableOpacity onPress={handleUpdateProfile}>
+                <Text style={[styles.modalSave, { color: colors.primary }]}>Save</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Gender</Text>
-              <TouchableOpacity
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                onPress={() => setGenderPickerVisible(true)}
-              >
-                <View style={styles.pickerContainer}>
-                  <Text style={[styles.pickerText, { color: editForm.gender ? colors.text : colors.textSecondary }]}>
-                    {editForm.gender ? genderOptions.find(option => option.value === editForm.gender)?.label || editForm.gender : 'Select gender'}
-                  </Text>
-                  <ChevronDown size={20} color={colors.textSecondary} />
-                </View>
-              </TouchableOpacity>
-            </View>
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Full Name</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={editForm.full_name}
+                  onChangeText={(text) => setEditForm(prev => ({ ...prev, full_name: text }))}
+                  placeholder="Enter your full name"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Year Level</Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={editForm.year_level}
-                onChangeText={(text) => setEditForm(prev => ({ ...prev, year_level: text }))}
-                placeholder="e.g., 1st Year, 2nd Year"
-                placeholderTextColor={colors.textSecondary}
-              />
-            </View>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Birthday</Text>
+                <TouchableOpacity
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => setDatePickerVisible(true)}
+                >
+                  <View style={styles.pickerContainer}>
+                    <Text style={[styles.pickerText, { color: editForm.birthday ? colors.text : colors.textSecondary }]}>
+                      {editForm.birthday ? formatDateForDisplay(editForm.birthday) : 'Select birthday'}
+                    </Text>
+                    <Calendar size={20} color={colors.textSecondary} />
+                  </View>
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Section</Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={editForm.section}
-                onChangeText={(text) => setEditForm(prev => ({ ...prev, section: text }))}
-                placeholder="e.g., A, B, C"
-                placeholderTextColor={colors.textSecondary}
-              />
-            </View>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Gender</Text>
+                <TouchableOpacity
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => setGenderPickerVisible(true)}
+                >
+                  <View style={styles.pickerContainer}>
+                    <Text style={[styles.pickerText, { color: editForm.gender ? colors.text : colors.textSecondary }]}>
+                      {editForm.gender ? genderOptions.find(option => option.value === editForm.gender)?.label || editForm.gender : 'Select gender'}
+                    </Text>
+                    <ChevronDown size={20} color={colors.textSecondary} />
+                  </View>
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Course</Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={editForm.course}
-                onChangeText={(text) => setEditForm(prev => ({ ...prev, course: text }))}
-                placeholder="e.g., Computer Science"
-                placeholderTextColor={colors.textSecondary}
-              />
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Year Level</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={editForm.year_level}
+                  onChangeText={(text) => setEditForm(prev => ({ ...prev, year_level: text }))}
+                  placeholder="e.g., 1st Year, 2nd Year"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
 
-      {/* Gender Picker Modal */}
-      <Modal visible={genderPickerVisible} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={() => setGenderPickerVisible(false)}>
-              <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Gender</Text>
-            <View style={{ width: 60 }} />
-          </View>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Section</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={editForm.section}
+                  onChangeText={(text) => setEditForm(prev => ({ ...prev, section: text }))}
+                  placeholder="e.g., A, B, C"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
 
-          <ScrollView style={styles.modalContent}>
-            {genderOptions.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.genderOption,
-                  { borderBottomColor: colors.border },
-                  editForm.gender === option.value && { backgroundColor: colors.primary + '20' }
-                ]}
-                onPress={() => {
-                  setEditForm(prev => ({ ...prev, gender: option.value }));
-                  setGenderPickerVisible(false);
-                }}
-              >
-                <Text style={[
-                  styles.genderOptionText,
-                  { color: colors.text },
-                  editForm.gender === option.value && { color: colors.primary, fontFamily: 'Inter-SemiBold' }
-                ]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Course</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={editForm.course}
+                  onChangeText={(text) => setEditForm(prev => ({ ...prev, course: text }))}
+                  placeholder="e.g., Computer Science"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+            </ScrollView>
+          </ResponsiveContainer>
         </SafeAreaView>
       </Modal>
 
@@ -600,196 +564,54 @@ export default function ProfileScreen() {
         </SafeAreaView>
       </Modal>
 
-      {/* Sign Out Confirmation Modal */}
-      <Modal
-        visible={signOutConfirmVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSignOutConfirmVisible(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: colors.card, padding: 28, borderRadius: 16, width: '80%', alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ fontSize: 18, fontFamily: 'Inter-SemiBold', color: colors.text, marginBottom: 12 }}>Sign Out</Text>
-            <Text style={{ fontSize: 15, color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}>
-              Are you sure you want to sign out?
-            </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
-              <TouchableOpacity
-                style={{ flex: 1, marginRight: 8, paddingVertical: 12, borderRadius: 8, backgroundColor: colors.border, alignItems: 'center' }}
-                onPress={() => setSignOutConfirmVisible(false)}
-              >
-                <Text style={{ color: colors.text, fontFamily: 'Inter-SemiBold' }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{ flex: 1, marginLeft: 8, paddingVertical: 12, borderRadius: 8, backgroundColor: colors.error, alignItems: 'center' }}
-                onPress={handleSignOut}
-              >
-                <Text style={{ color: colors.card, fontFamily: 'Inter-SemiBold' }}>Sign Out</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Change Password Modal */}
-      <Modal visible={changePasswordModalVisible} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={() => setChangePasswordModalVisible(false)}>
-              <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Change Password</Text>
-            <TouchableOpacity onPress={handleChangePassword} disabled={loading}>
-              <Text style={[styles.modalSave, { color: colors.primary, opacity: loading ? 0.5 : 1 }]}>
-                {loading ? 'Changing...' : 'Change'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Current Password</Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={passwordForm.currentPassword}
-                onChangeText={(text) => setPasswordForm(prev => ({ ...prev, currentPassword: text }))}
-                placeholder="Enter your current password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>New Password</Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={passwordForm.newPassword}
-                onChangeText={(text) => setPasswordForm(prev => ({ ...prev, newPassword: text }))}
-                placeholder="Enter your new password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Confirm New Password</Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={passwordForm.confirmPassword}
-                onChangeText={(text) => setPasswordForm(prev => ({ ...prev, confirmPassword: text }))}
-                placeholder="Confirm your new password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-              />
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-
-      {/* Quick Actions Modal */}
-      <Modal
-        visible={quickActionsVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setQuickActionsVisible(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 16, width: '88%', borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ fontSize: 18, fontFamily: 'Inter-SemiBold', color: colors.text, marginBottom: 12 }}>Quick Actions</Text>
-
-            {/* Posts Group */}
-            <View style={{ marginBottom: 8 }}>
-              <Text style={{ fontSize: 12, fontFamily: 'Inter-Medium', color: colors.textSecondary, marginBottom: 6 }}>Posts</Text>
-              <TouchableOpacity style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center' }} onPress={() => { setQuickActionsVisible(false); router.push('/my-posts'); }}>
-                <Edit3 size={18} color={colors.text} />
-                <Text style={{ marginLeft: 10, color: colors.text }}>My Posts</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center' }} onPress={() => { setQuickActionsVisible(false); router.push('/resolved-posts'); }}>
-                <Calendar size={18} color={colors.text} />
-                <Text style={{ marginLeft: 10, color: colors.text }}>Resolved Posts</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Account Group */}
-            <View style={{ marginBottom: 8 }}>
-              <Text style={{ fontSize: 12, fontFamily: 'Inter-Medium', color: colors.textSecondary, marginBottom: 6 }}>Account</Text>
-              <TouchableOpacity style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center' }} onPress={() => { setQuickActionsVisible(false); setChangePasswordModalVisible(true); }}>
-                <Lock size={18} color={colors.text} />
-                <Text style={{ marginLeft: 10, color: colors.text }}>Change Password</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center' }} onPress={() => { setQuickActionsVisible(false); setDeactivateModalVisible(true); }}>
-                <Shield size={18} color={colors.error} />
-                <Text style={{ marginLeft: 10, color: colors.error }}>Deactivate Account</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Support Group */}
-            <View style={{ marginBottom: 8 }}>
-              <Text style={{ fontSize: 12, fontFamily: 'Inter-Medium', color: colors.textSecondary, marginBottom: 6 }}>Support</Text>
-              <TouchableOpacity style={{ paddingVertical: 10, flexDirection: 'row', alignItems: 'center' }} onPress={() => { setQuickActionsVisible(false); router.push('/feedback'); }}>
-                <MessageSquare size={18} color={colors.text} />
-                <Text style={{ marginLeft: 10, color: colors.text }}>Send Feedback</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={{ marginTop: 8, paddingVertical: 12, borderRadius: 8, backgroundColor: colors.border, alignItems: 'center' }}
-              onPress={() => setQuickActionsVisible(false)}
-            >
-              <Text style={{ color: colors.text, fontFamily: 'Inter-SemiBold' }}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       {/* Deactivate Account Modal */}
       <Modal visible={deactivateModalVisible} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={() => setDeactivateModalVisible(false)}>
-              <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Deactivate Account</Text>
-            <View style={{ width: 60 }} />
-          </View>
-
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Password Confirmation</Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={deactivatePassword}
-                onChangeText={setDeactivatePassword}
-                placeholder="Enter your password to confirm"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry
-              />
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}> 
+          <ResponsiveContainer>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
+              <TouchableOpacity onPress={() => setDeactivateModalVisible(false)}>
+                <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Deactivate Account</Text>
+              <View style={{ width: 60 }} />
             </View>
 
-            <View style={[styles.warningBox, { backgroundColor: colors.error + '20', borderColor: colors.error }]}>
-              <Text style={[styles.warningTitle, { color: colors.error }]}>⚠️ Warning</Text>
-              <Text style={[styles.warningText, { color: colors.text }]}>
-                This action will permanently delete your account and all associated data including:
-              </Text>
-              <Text style={[styles.warningText, { color: colors.text }]}>
-                • Your profile information{'\n'}
-                • All your posts{'\n'}
-                • All your comments{'\n'}
-                • All your messages{'\n'}
-                • This action cannot be undone
-              </Text>
-            </View>
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Password Confirmation</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={deactivatePassword}
+                  onChangeText={setDeactivatePassword}
+                  placeholder="Enter your password to confirm"
+                  placeholderTextColor={colors.textSecondary}
+                  secureTextEntry
+                />
+              </View>
 
-            <TouchableOpacity
-              style={[styles.deactivateButton, { backgroundColor: colors.error }]}
-              onPress={handleDeactivateAccount}
-              disabled={loading}
-            >
-              <Text style={[styles.deactivateButtonText, { color: colors.card }]}>
-                {loading ? 'Deactivating...' : 'Deactivate Account'}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
+              <View style={[styles.warningBox, { backgroundColor: colors.error + '20', borderColor: colors.error }]}>
+                <Text style={[styles.warningTitle, { color: colors.error }]}>⚠️ Warning</Text>
+                <Text style={[styles.warningText, { color: colors.text }]}>This action will permanently delete your account and all associated data including:</Text>
+                <Text style={[styles.warningText, { color: colors.text }]}>
+                  • Your profile information{'\n'}
+                  • All your posts{'\n'}
+                  • All your comments{'\n'}
+                  • All your messages{'\n'}
+                  • This action cannot be undone
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.deactivateButton, { backgroundColor: colors.error }]}
+                onPress={handleDeactivateAccount}
+                disabled={loading}
+              >
+                <Text style={[styles.deactivateButtonText, { color: colors.card }]}>
+                  {loading ? 'Deactivating...' : 'Deactivate Account'}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </ResponsiveContainer>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
