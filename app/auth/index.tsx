@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { User, Eye, EyeOff } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 export default function AuthScreen() {
   const { colors } = useTheme();
@@ -124,21 +125,22 @@ export default function AuthScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView 
-        style={styles.container} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../../assets/images/icon.png')} 
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <ResponsiveContainer>
+        <KeyboardAvoidingView 
+          style={styles.container} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Image 
+                  source={require('../../assets/images/icon.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
             <Text style={[styles.title, { color: colors.text }]}>RECLAIM</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Lost & Found for your school community
@@ -358,8 +360,9 @@ export default function AuthScreen() {
               </View>
             </View>
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </ResponsiveContainer>
     </SafeAreaView>
   );
 }
