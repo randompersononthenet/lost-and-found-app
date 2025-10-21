@@ -9,6 +9,7 @@ import * as Linking from 'expo-linking';
 import Toast from 'react-native-toast-message';
 import * as MailComposer from 'expo-mail-composer';
 import * as Clipboard from 'expo-clipboard';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 export default function FeedbackScreen() {
   const { colors } = useTheme();
@@ -142,26 +143,27 @@ export default function FeedbackScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Feedback</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <ResponsiveContainer>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Feedback</Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.feedbackContainer}>
-          <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
-            <Mail size={32} color={colors.card} />
-          </View>
-          
-          <Text style={[styles.title, { color: colors.text }]}>
-            We'd Love to Hear From You!
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.feedbackContainer}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
+              <Mail size={32} color={colors.card} />
+            </View>
+            
+            <Text style={[styles.title, { color: colors.text }]}>
+              We'd Love to Hear From You!
           </Text>
           
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
@@ -214,8 +216,9 @@ export default function FeedbackScreen() {
               💡 Tip: Your feedback will open in your email client. You can edit it before sending.
             </Text>
           </View>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </ResponsiveContainer>
     </SafeAreaView>
   );
 }
