@@ -11,6 +11,7 @@ import Toast from 'react-native-toast-message';
 import * as Haptics from 'expo-haptics';
 import UserProfileModal from '@/components/UserProfileModal';
 import * as ImagePicker from 'expo-image-picker';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 export default function ChatScreen() {
   const { colors } = useTheme();
@@ -468,81 +469,84 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
-      {renderChatHeader()}
+      <ResponsiveContainer>
+        {renderChatHeader()}
 
-      <KeyboardAvoidingView 
-        style={styles.content}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.messagesList}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <User size={48} color={colors.textSecondary} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                Start a Conversation
+        <KeyboardAvoidingView 
+          style={styles.content}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.messagesList}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            style={{ flex: 1 }}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <User size={48} color={colors.textSecondary} />
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                  Start a Conversation
+                </Text>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  Send a message to begin chatting
+                </Text>
+              </View>
+            }
+          />
+
+          {/* Replying preview */}
+          {replyingTo && (
+            <View style={[styles.replyingBar, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+              <Text style={[styles.replyingLabel, { color: colors.textSecondary }]}>Replying to</Text>
+              <Text style={[styles.replyingText, { color: colors.text }]} numberOfLines={1}>
+                {replyingTo.message_type === 'image' ? '[Image]' : (replyingTo.content || '')}
               </Text>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                Send a message to begin chatting
-              </Text>
+              <TouchableOpacity style={styles.replyingClose} onPress={() => setReplyingTo(null)}>
+                <Text style={{ color: colors.textSecondary }}>✕</Text>
+              </TouchableOpacity>
             </View>
-          }
-        />
-
-        {/* Replying preview */}
-        {replyingTo && (
-          <View style={[styles.replyingBar, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
-            <Text style={[styles.replyingLabel, { color: colors.textSecondary }]}>Replying to</Text>
-            <Text style={[styles.replyingText, { color: colors.text }]} numberOfLines={1}>
-              {replyingTo.message_type === 'image' ? '[Image]' : (replyingTo.content || '')}
-            </Text>
-            <TouchableOpacity style={styles.replyingClose} onPress={() => setReplyingTo(null)}>
-              <Text style={{ color: colors.textSecondary }}>✕</Text>
+          )}
+          <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}> 
+            <TouchableOpacity
+              style={[styles.attachButton, { borderColor: colors.border, backgroundColor: colors.card }]}
+              onPress={handlePickImage}
+              disabled={sendingImage}
+            >
+              {sendingImage ? (
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+              ) : (
+                <ImagePlus size={22} color={colors.textSecondary} style={{ marginTop: 1 }} />
+              )}
+            </TouchableOpacity>
+            <TextInput
+              style={[styles.messageInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+              placeholder="Type a message..."
+              placeholderTextColor={colors.textSecondary}
+              value={newMessage}
+              onChangeText={(t) => { setNewMessage(t); if (conversationId) setTyping(String(conversationId), true); }}
+              multiline
+              maxLength={1000}
+            />
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                {
+                  backgroundColor: newMessage.trim() && !sending && !sendingImage ? colors.primary : colors.border,
+                  opacity: newMessage.trim() && !sending && !sendingImage ? 1 : 0.6,
+                }
+              ]}
+              onPress={handleSendMessage}
+              disabled={!newMessage.trim() || sending || sendingImage}
+            >
+              <Send size={20} color={colors.card} />
             </TouchableOpacity>
           </View>
-        )}
-        <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-          <TouchableOpacity
-            style={[styles.attachButton, { borderColor: colors.border, backgroundColor: colors.card }]}
-            onPress={handlePickImage}
-            disabled={sendingImage}
-          >
-            {sendingImage ? (
-              <ActivityIndicator size="small" color={colors.textSecondary} />
-            ) : (
-              <ImagePlus size={22} color={colors.textSecondary} style={{ marginTop: 1 }} />
-            )}
-          </TouchableOpacity>
-          <TextInput
-            style={[styles.messageInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
-            placeholder="Type a message..."
-            placeholderTextColor={colors.textSecondary}
-            value={newMessage}
-            onChangeText={(t) => { setNewMessage(t); if (conversationId) setTyping(String(conversationId), true); }}
-            multiline
-            maxLength={1000}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              {
-                backgroundColor: newMessage.trim() && !sending && !sendingImage ? colors.primary : colors.border,
-                opacity: newMessage.trim() && !sending && !sendingImage ? 1 : 0.6,
-              }
-            ]}
-            onPress={handleSendMessage}
-            disabled={!newMessage.trim() || sending || sendingImage}
-          >
-            <Send size={20} color={colors.card} />
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </ResponsiveContainer>
 
       {/* Search Modal */}
       <Modal
