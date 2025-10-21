@@ -166,19 +166,6 @@ export default function CreatePostScreen() {
     let imageUrls: string[] = [];
 
     try {
-      // Test Supabase connection first
-      console.log('Testing Supabase connection...');
-      try {
-        const { data: testData, error: testError } = await supabase
-          .from('posts')
-          .select('id')
-          .limit(1);
-        
-        console.log('Database connection test:', testError ? 'Failed' : 'Success');
-      } catch (error) {
-        console.error('Database connection test failed:', error);
-      }
-
       // 1. Upload multiple images to Supabase Storage (with client-side compress + direct Blob upload)
       if (images.length > 0) {
         console.log(`Uploading ${images.length} images...`);
@@ -190,15 +177,17 @@ export default function CreatePostScreen() {
           ]);
         };
 
-        for (let i = 0; i < images.length; i++) {
-          const imageUri = images[i];
+        // Prepare limited-concurrency upload workers
+        const concurrency = Math.min(3, images.length);
+        let index = 0;
+
+        const uploadOne = async (imageUri: string, i: number) => {
           console.log(`Uploading image ${i + 1}/${images.length}: ${imageUri}`);
-          
           // Resize/compress for faster upload and lower bandwidth
           const manipulated = await ImageManipulator.manipulateAsync(
             imageUri,
-            [{ resize: { width: 1280 } }],
-            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+            [{ resize: { width: 1024 } }],
+            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG }
           );
 
           // Fetch blob (avoids slow base64 conversion)
@@ -233,7 +222,18 @@ export default function CreatePostScreen() {
           } else {
             throw new Error(`Failed to get public URL for image ${i + 1}.`);
           }
-        }
+        };
+
+        const worker = async () => {
+          while (true) {
+            const i = index++;
+            if (i >= images.length) break;
+            const imageUri = images[i];
+            await uploadOne(imageUri, i);
+          }
+        };
+
+        await Promise.all(Array.from({ length: concurrency }, () => worker()));
       }
 
       // 2. Insert post with public image URLs
