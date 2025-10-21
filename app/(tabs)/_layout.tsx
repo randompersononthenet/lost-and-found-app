@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import { Chrome as Home, Plus, MessageCircle, User, Bell, Search as SearchIcon } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { Platform, useWindowDimensions, View, Text } from 'react-native';
+import { Platform, useWindowDimensions, View, Text, Image } from 'react-native';
 import { TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 
@@ -29,7 +29,10 @@ export default function TabLayout() {
                 borderBottomColor: colors.border,
                 backgroundColor: colors.surface,
               }}>
-                <Text style={{ color: colors.text, fontFamily: 'Inter-Bold', fontSize: 18 }}>RECLAIM</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Image source={require('../../logo.png')} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
+                  <Text style={{ color: colors.text, fontFamily: 'Inter-Bold', fontSize: 18 }}>RECLAIM</Text>
+                </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <TouchableOpacity onPress={() => router.push('/(tabs)')} style={{ padding: 8, marginRight: 4 }}>
                     <Home size={20} color={colors.textSecondary} />

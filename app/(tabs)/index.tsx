@@ -697,7 +697,9 @@ export default function FeedScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {showInlineHeader && (
         <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>RECLAIM</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Image source={require('../../logo.png')} style={{ width: 28, height: 28, resizeMode: 'contain' }} />
+          </View>
           <TouchableOpacity
             style={styles.searchButton}
             onPress={() => router.push('/search')}
