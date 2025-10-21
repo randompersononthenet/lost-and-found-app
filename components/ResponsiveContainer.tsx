@@ -12,7 +12,7 @@ export default function ResponsiveContainer({ children }: { children: React.Reac
   }
 
   return (
-    <View style={{ width: '100%', maxWidth, alignSelf: 'center' }}>
+    <View style={{ flex: 1, width: '100%', maxWidth, alignSelf: 'center' }}>
       {children}
     </View>
   );

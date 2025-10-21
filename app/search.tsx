@@ -691,6 +691,7 @@ export default function SearchScreen() {
       
 
       <FlatList
+        style={{ flex: 1 }}
         data={loading && !hasSearched ? Array.from({ length: 5 }, (_, i) => ({ id: `skeleton-${i}` } as any)) : searchResults}
         renderItem={loading && !hasSearched ? (() => <SkeletonCard />) as any : renderSearchResult}
         keyExtractor={loading && !hasSearched ? ((item: any) => item.id) : keyExtractor}
