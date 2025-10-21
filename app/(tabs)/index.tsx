@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Image, Modal, Alert, Share, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Image, Modal, Alert, Share, TextInput, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,6 +33,8 @@ interface Post {
 export default function FeedScreen() {
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const showInlineHeader = !(Platform.OS === 'web' && width >= 900);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -687,22 +689,23 @@ export default function FeedScreen() {
       </View>
     </View>
   );
-
   if (!user) {
     return null;
   }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>RECLAIM</Text>
-        <TouchableOpacity
-          style={styles.searchButton}
-          onPress={() => router.push('/search')}
-        >
-          <Search size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+      {showInlineHeader && (
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>RECLAIM</Text>
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={() => router.push('/search')}
+          >
+            <Search size={24} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <FlatList
         data={posts}
