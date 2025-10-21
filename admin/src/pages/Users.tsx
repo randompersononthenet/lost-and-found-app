@@ -17,6 +17,10 @@ export default function Users() {
 	const { role } = useSession()
 	const [users, setUsers] = useState<Profile[]>([])
 	const [loading, setLoading] = useState(true)
+	const [inviteOpen, setInviteOpen] = useState(false)
+	const [inviteEmail, setInviteEmail] = useState('')
+	const [inviteLoading, setInviteLoading] = useState(false)
+	const [inviteMessage, setInviteMessage] = useState<string>('')
 
 	async function load() {
 		setLoading(true)
@@ -67,11 +71,62 @@ export default function Users() {
 		})
 	}
 
+	async function inviteUser() {
+		setInviteMessage('')
+		if (!inviteEmail.trim()) { setInviteMessage('Please enter an email.'); return }
+		setInviteLoading(true)
+		try {
+			const redirectTo = `${window.location.origin}/admin`
+			const { error } = await supabase.auth.signInWithOtp({
+				email: inviteEmail.trim(),
+				options: { emailRedirectTo: redirectTo }
+			})
+			if (error) throw error
+			setInviteMessage('Invitation sent. The user will receive a sign-in link via email.')
+			setInviteEmail('')
+		} catch (e: any) {
+			setInviteMessage(e?.message || 'Failed to send invitation.')
+		} finally {
+			setInviteLoading(false)
+		}
+	}
+
 	if (role !== 'admin') return <Nav title="Users">Only admins can manage users.</Nav>
 
 	return (
 		<Nav title="Users">
 			<div className="users-container">
+				<div className="page-actions" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+					<button className="action-btn success-btn" onClick={() => { setInviteOpen(true); setInviteMessage(''); }}>
+						<span style={{ marginRight: 6 }}>+ Add User</span>
+					</button>
+				</div>
+
+				{inviteOpen && (
+					<div className="modal-overlay">
+						<div className="modal-card">
+							<h3 style={{ marginTop: 0 }}>Invite User</h3>
+							<p className="text-secondary" style={{ marginTop: 0 }}>Send a magic link to let the user complete registration.</p>
+							<label className="selector-label" htmlFor="invite-email">Email</label>
+							<input
+								id="invite-email"
+								type="email"
+								placeholder="name@example.com"
+								value={inviteEmail}
+								onChange={(e) => setInviteEmail(e.target.value)}
+								className="text-input"
+								style={{ width: '100%', marginBottom: 12 }}
+							/>
+							{inviteMessage && (<div style={{ marginBottom: 12 }} className="text-secondary">{inviteMessage}</div>)}
+							<div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+								<button className="action-btn" onClick={() => setInviteOpen(false)} disabled={inviteLoading}>Cancel</button>
+								<button className="action-btn success-btn" onClick={inviteUser} disabled={inviteLoading}>
+									{inviteLoading ? 'Sending...' : 'Send Invite'}
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
 				{loading ? (
 					<div className="loading-state">
 						<div className="loading-spinner"></div>
