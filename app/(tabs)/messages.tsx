@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,6 +28,11 @@ export default function MessagesScreen() {
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   const [showSearch, setShowSearch] = useState(false); // NEW
   const searchInputRef = useRef<TextInput>(null); // NEW
+  // Confirm dialog state (web-friendly)
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState<string>('');
+  const [confirmMessage, setConfirmMessage] = useState<string>('');
+  const confirmActionRef = useRef<null | (() => Promise<void> | void)>(null);
 
   useEffect(() => {
     if (showSearch) {
@@ -186,14 +191,10 @@ export default function MessagesScreen() {
           <TouchableOpacity
             style={[styles.deleteButton, { borderColor: colors.border }]}
             onPress={() => {
-              Alert.alert(
-                'Delete Conversation',
-                'This will permanently delete the entire conversation for you. Continue?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: () => deleteConversation(item.id) },
-                ]
-              );
+              setConfirmTitle('Delete Conversation');
+              setConfirmMessage('This will permanently delete the entire conversation for you. Continue?');
+              confirmActionRef.current = () => deleteConversation(item.id);
+              setConfirmVisible(true);
             }}
           >
             <Trash2 size={16} color={colors.textSecondary} />
@@ -202,20 +203,17 @@ export default function MessagesScreen() {
           <TouchableOpacity
             style={[styles.leaveButton, { borderColor: colors.border }]}
             onPress={() => {
-              Alert.alert(
-                'Leave Conversation',
-                'You will be removed from this conversation. You can undo immediately after.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Leave', style: 'destructive', onPress: async () => {
-                      await leaveConversation(item.id);
-                      Alert.alert('Left Conversation', 'Undo leaving this conversation?', [
-                        { text: 'Dismiss', style: 'cancel' },
-                        { text: 'Undo', onPress: () => undoLeaveConversation(item.id) },
-                      ]);
-                    } },
-                ]
-              );
+              setConfirmTitle('Leave Conversation');
+              setConfirmMessage('You will be removed from this conversation. You can undo immediately after.');
+              confirmActionRef.current = async () => {
+                await leaveConversation(item.id);
+                // Secondary undo prompt via our confirm as well
+                setConfirmTitle('Left Conversation');
+                setConfirmMessage('Undo leaving this conversation?');
+                confirmActionRef.current = () => undoLeaveConversation(item.id);
+                setConfirmVisible(true);
+              };
+              setConfirmVisible(true);
             }}
           >
             <Text style={[styles.leaveText, { color: colors.textSecondary }]}>Leave</Text>
@@ -339,6 +337,37 @@ export default function MessagesScreen() {
         userProfile={selectedUserProfile}
         onMessagePress={() => selectedUserProfile && startConversation(selectedUserProfile.id)}
       />
+      {/* Confirm Dialog (web friendly) */}
+      <Modal
+        visible={confirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 16, width: '88%', borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter-SemiBold', color: colors.text, marginBottom: 8 }}>{confirmTitle}</Text>
+            <Text style={{ fontSize: 14, fontFamily: 'Inter-Regular', color: colors.textSecondary, marginBottom: 16 }}>{confirmMessage}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <TouchableOpacity onPress={() => setConfirmVisible(false)} style={{ paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.border, marginRight: 8 }}>
+                <Text style={{ color: colors.text }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  const fn = confirmActionRef.current;
+                  setConfirmVisible(false);
+                  // Execute after closing for snappier UX
+                  try { await fn?.(); } catch {}
+                  confirmActionRef.current = null;
+                }}
+                style={{ paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.primary }}
+              >
+                <Text style={{ color: colors.card, fontFamily: 'Inter-SemiBold' }}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
