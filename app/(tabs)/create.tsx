@@ -166,6 +166,19 @@ export default function CreatePostScreen() {
     let imageUrls: string[] = [];
 
     try {
+      // Test Supabase connection first
+      console.log('Testing Supabase connection...');
+      try {
+        const { data: testData, error: testError } = await supabase
+          .from('posts')
+          .select('id')
+          .limit(1);
+        
+        console.log('Database connection test:', testError ? 'Failed' : 'Success');
+      } catch (error) {
+        console.error('Database connection test failed:', error);
+      }
+
       // 1. Upload multiple images to Supabase Storage (with client-side compress + direct Blob upload)
       if (images.length > 0) {
         console.log(`Uploading ${images.length} images...`);
@@ -177,17 +190,15 @@ export default function CreatePostScreen() {
           ]);
         };
 
-        // Prepare limited-concurrency upload workers
-        const concurrency = Math.min(3, images.length);
-        let index = 0;
-
-        const uploadOne = async (imageUri: string, i: number) => {
+        for (let i = 0; i < images.length; i++) {
+          const imageUri = images[i];
           console.log(`Uploading image ${i + 1}/${images.length}: ${imageUri}`);
+          
           // Resize/compress for faster upload and lower bandwidth
           const manipulated = await ImageManipulator.manipulateAsync(
             imageUri,
-            [{ resize: { width: 1024 } }],
-            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG }
+            [{ resize: { width: 1280 } }],
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
           );
 
           // Fetch blob (avoids slow base64 conversion)
@@ -199,9 +210,12 @@ export default function CreatePostScreen() {
 
           // Simple upload with timeout and one retry
           const doUpload = async () => {
+            // Convert to Uint8Array for RN/Web compatibility
+            const ab = await blob.arrayBuffer();
+            const bytes = new Uint8Array(ab);
             const { error: uploadError } = await supabase.storage
               .from('post-images')
-              .upload(fileName, blob, {
+              .upload(fileName, bytes, {
                 contentType: fileType,
                 upsert: false,
               });
@@ -211,6 +225,7 @@ export default function CreatePostScreen() {
           try {
             await withTimeout(doUpload(), 45000, 'Upload');
           } catch (e1) {
+            console.warn('Post image upload attempt 1 failed:', e1);
             await withTimeout(doUpload(), 45000, 'Upload (retry)');
           }
 
@@ -222,18 +237,7 @@ export default function CreatePostScreen() {
           } else {
             throw new Error(`Failed to get public URL for image ${i + 1}.`);
           }
-        };
-
-        const worker = async () => {
-          while (true) {
-            const i = index++;
-            if (i >= images.length) break;
-            const imageUri = images[i];
-            await uploadOne(imageUri, i);
-          }
-        };
-
-        await Promise.all(Array.from({ length: concurrency }, () => worker()));
+        }
       }
 
       // 2. Insert post with public image URLs
@@ -275,10 +279,11 @@ export default function CreatePostScreen() {
       router.push('/(tabs)');
     } catch (error) {
       console.error('Error creating post:', error);
+      const msg = (error instanceof Error && error.message) ? error.message : 'Failed to create post. Please try again.';
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: error instanceof Error ? error.message : 'Failed to create post. Please try again.',
+        text2: msg,
       });
     } finally {
       setLoading(false);
