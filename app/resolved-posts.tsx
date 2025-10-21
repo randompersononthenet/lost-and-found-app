@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { ArrowLeft, RefreshCw, MapPin, Calendar, Heart, MessageCircle, Edit, Trash2 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 interface ResolvedPost {
   id: string;
@@ -196,8 +197,30 @@ export default function ResolvedPostsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+        <ResponsiveContainer>
+          <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <ArrowLeft size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Resolved Posts</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          <View style={styles.loadingContainer}>
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading...</Text>
+          </View>
+        </ResponsiveContainer>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <ResponsiveContainer>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
@@ -207,38 +230,20 @@ export default function ResolvedPostsScreen() {
           <Text style={[styles.headerTitle, { color: colors.text }]}>Resolved Posts</Text>
           <View style={styles.headerSpacer} />
         </View>
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Resolved Posts</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {resolvedPosts.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No Resolved Posts</Text>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Posts that you mark as resolved or claimed will appear here.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={resolvedPosts}
-          renderItem={({ item }) => (
-            <View style={[styles.postCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+        {resolvedPosts.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Resolved Posts</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}> 
+              Posts that you mark as resolved or claimed will appear here.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            style={{ flex: 1 }}
+            data={resolvedPosts}
+            renderItem={({ item }) => (
+            <View style={[styles.postCard, { borderColor: colors.border, backgroundColor: colors.surface }]}> 
               <View style={styles.postHeader}>
                 <View style={styles.userInfoContainer}>
                   <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
@@ -300,13 +305,14 @@ export default function ResolvedPostsScreen() {
               </View>
             </View>
           )}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.postsList}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.postsList}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </ResponsiveContainer>
     </SafeAreaView>
   );
 }
