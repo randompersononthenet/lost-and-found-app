@@ -294,6 +294,7 @@ export default function MessagesScreen() {
 
       {showSearch ? (
         <FlatList
+          style={{ flex: 1 }}
           data={searchResults}
           renderItem={renderSearchResult}
           keyExtractor={(item) => item.id}
@@ -315,6 +316,7 @@ export default function MessagesScreen() {
         />
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={conversations}
           renderItem={renderConversation}
           keyExtractor={(item) => item.id}

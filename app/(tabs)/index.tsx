@@ -712,6 +712,7 @@ export default function FeedScreen() {
         )}
 
         <FlatList
+          style={{ flex: 1 }}
           data={posts}
           renderItem={renderPost}
           keyExtractor={(item) => item.id}
