@@ -8,6 +8,7 @@ import { Search, Filter, MapPin, Calendar, Heart, MessageCircle, ChevronDown, Ar
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 interface SearchResult {
   id: string;
@@ -532,8 +533,9 @@ export default function SearchScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <ResponsiveContainer>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
@@ -719,6 +721,7 @@ export default function SearchScreen() {
           </View>
         }
       />
+      </ResponsiveContainer>
 
       {/* User Profile Modal */}
       <UserProfileModal
