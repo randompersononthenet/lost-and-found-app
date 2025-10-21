@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Edit3, Trash2, ArrowLeft, Image as ImageIcon, Search, X, Filter } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 export default function MyPostsScreen() {
   const { colors } = useTheme();
@@ -216,74 +217,77 @@ export default function MyPostsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>My Posts</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <ResponsiveContainer>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>My Posts</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      {/* Search Bar */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Search size={20} color={colors.textSecondary} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search your posts..."
-            placeholderTextColor={colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+        {/* Search Bar */}
+        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Search size={20} color={colors.textSecondary} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search your posts..."
+              placeholderTextColor={colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Filter Chips */}
+        <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <View style={styles.filterChips}>
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category.value}
+                style={[
+                  styles.filterChip,
+                  { backgroundColor: selectedCategory === category.value ? colors.primary : colors.card, borderColor: colors.border }
+                ]}
+                onPress={() => setSelectedCategory(category.value)}
+              >
+                <Text style={[
+                  styles.filterChipText,
+                  { color: selectedCategory === category.value ? colors.card : colors.text }
+                ]}>
+                  {category.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {error ? (
+          <View style={styles.centered}>
+            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+          </View>
+        ) : (
+          <FlatList
+            style={{ flex: 1 }}
+            data={posts}
+            renderItem={renderPost}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={styles.listContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchPosts(true)} />}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.1}
+            ListFooterComponent={renderFooter}
+            ListEmptyComponent={renderEmpty}
+            showsVerticalScrollIndicator={false}
           />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Filter Chips */}
-      <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <View style={styles.filterChips}>
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category.value}
-              style={[
-                styles.filterChip,
-                { backgroundColor: selectedCategory === category.value ? colors.primary : colors.card, borderColor: colors.border }
-              ]}
-              onPress={() => setSelectedCategory(category.value)}
-            >
-              <Text style={[
-                styles.filterChipText,
-                { color: selectedCategory === category.value ? colors.card : colors.text }
-              ]}>
-                {category.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {error ? (
-        <View style={styles.centered}>
-          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={posts}
-          renderItem={renderPost}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.listContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchPosts(true)} />}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.1}
-          ListFooterComponent={renderFooter}
-          ListEmptyComponent={renderEmpty}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+        )}
+      </ResponsiveContainer>
     </SafeAreaView>
   );
 }
