@@ -9,6 +9,7 @@ import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 interface Post {
   id: string;
@@ -694,31 +695,33 @@ export default function FeedScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {showInlineHeader && (
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Image source={require('../../logo.png')} style={{ width: 28, height: 28, resizeMode: 'contain' }} />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <ResponsiveContainer>
+        {showInlineHeader && (
+          <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Image source={require('../../logo.png')} style={{ width: 28, height: 28, resizeMode: 'contain' }} />
+            </View>
+            <TouchableOpacity
+              style={styles.searchButton}
+              onPress={() => router.push('/search')}
+            >
+              <Search size={24} color={colors.primary} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={() => router.push('/search')}
-          >
-            <Search size={24} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-      )}
+        )}
 
-      <FlatList
-        data={posts}
-        renderItem={renderPost}
-        keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        contentContainerStyle={styles.feedContent}
-        showsVerticalScrollIndicator={false}
-      />
+        <FlatList
+          data={posts}
+          renderItem={renderPost}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          contentContainerStyle={styles.feedContent}
+          showsVerticalScrollIndicator={false}
+        />
+      </ResponsiveContainer>
 
       {/* Image Modal */}
       <Modal

@@ -9,6 +9,7 @@ import { Search, Filter, MapPin, Calendar, Heart, MessageCircle, Plus, Search as
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 interface UserSearchResult {
   id: string;
@@ -247,6 +248,7 @@ export default function MessagesScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ResponsiveContainer>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
         <TouchableOpacity
@@ -327,7 +329,7 @@ export default function MessagesScreen() {
           }
         />
       )}
-
+      </ResponsiveContainer>
       {/* User Profile Modal */}
       <UserProfileModal
         visible={userProfileModalVisible}

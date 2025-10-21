@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import * as ImageManipulator from 'expo-image-manipulator';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 export default function CreatePostScreen() {
   const { colors } = useTheme();
@@ -289,27 +290,28 @@ export default function CreatePostScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Create Post</Text>
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={loading || !title.trim() || !description.trim()}
-          style={[
-            styles.submitButton,
-            {
-              backgroundColor: (loading || !title.trim() || !description.trim()) ? colors.border : colors.primary,
-              opacity: (loading || !title.trim() || !description.trim()) ? 0.6 : 1,
-            }
-          ]}
-        >
-          <Text style={[styles.submitButtonText, { color: colors.card }]}>
-            {loading ? 'Posting...' : 'Post'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <ResponsiveContainer>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Create Post</Text>
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={loading || !title.trim() || !description.trim()}
+            style={[ 
+              styles.submitButton,
+              {
+                backgroundColor: (loading || !title.trim() || !description.trim()) ? colors.border : colors.primary,
+                opacity: (loading || !title.trim() || !description.trim()) ? 0.6 : 1,
+              }
+            ]}
+          >
+            <Text style={[styles.submitButtonText, { color: colors.card }]}> 
+              {loading ? 'Posting...' : 'Post'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Category Selection (Lost/Found) */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Category</Text>
@@ -492,7 +494,8 @@ export default function CreatePostScreen() {
             {loading ? 'Creating Post...' : 'Create Post'}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </ResponsiveContainer>
 
       {/* Date Picker Modal */}
       <Modal visible={datePickerVisible} animationType="slide" presentationStyle="pageSheet">

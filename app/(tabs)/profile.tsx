@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Settings, CreditCard as Edit3, Moon, Sun, LogOut, User, ChevronDown, Calendar, Lock, Shield, MessageSquare } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 export default function ProfileScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -247,24 +248,25 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
-        <TouchableOpacity onPress={() => setEditModalVisible(true)}>
-          <Edit3 size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <ResponsiveContainer>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+          <TouchableOpacity onPress={() => setEditModalVisible(true)}>
+            <Edit3 size={24} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView style={styles.content}>
+        <ScrollView style={styles.content}>
         {/* Profile Info */}
         <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
             <User size={32} color={colors.card} />
           </View>
-          <Text style={[styles.profileName, { color: colors.text }]}>
+          <Text style={[styles.profileName, { color: colors.text }]}> 
             {profile?.full_name || 'User'}
           </Text>
-          <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>
+          <Text style={[styles.profileEmail, { color: colors.textSecondary }]}> 
             {profile?.email}
           </Text>
         </View>
@@ -340,7 +342,8 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </ResponsiveContainer>
 
       {/* Edit Profile Modal */}
       <Modal visible={editModalVisible} animationType="slide" presentationStyle="pageSheet">

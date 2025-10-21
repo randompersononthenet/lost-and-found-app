@@ -7,6 +7,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { Bell, MessageCircle, Heart, Trash2, Check, CheckCheck } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 interface NotificationItem {
   id: string;
@@ -214,50 +215,51 @@ export default function NotificationsScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Notifications
-        </Text>
-        {notifications.length > 0 && (
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={handleMarkAllAsRead}
-              style={[styles.headerButton, { backgroundColor: colors.surface }]}
-            >
-              <CheckCheck size={16} color={colors.primary} />
-              <Text style={[styles.headerButtonText, { color: colors.primary }]}>
-                Mark All Read
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleClearAll}
-              style={[styles.headerButton, { backgroundColor: colors.surface }]}
-            >
-              <Trash2 size={16} color={colors.error} />
-              <Text style={[styles.headerButtonText, { color: colors.error }]}>
-                Clear All
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-      <FlatList
-        data={notifications}
-        renderItem={renderNotification}
-        keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
-        }
-        ListEmptyComponent={renderEmptyState}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-      />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <ResponsiveContainer>
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}> 
+            Notifications
+          </Text>
+          {notifications.length > 0 && (
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={handleMarkAllAsRead}
+                style={[styles.headerButton, { backgroundColor: colors.surface }]}
+              >
+                <CheckCheck size={16} color={colors.primary} />
+                <Text style={[styles.headerButtonText, { color: colors.primary }]}>
+                  Mark All Read
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleClearAll}
+                style={[styles.headerButton, { backgroundColor: colors.surface }]}
+              >
+                <Trash2 size={16} color={colors.error} />
+                <Text style={[styles.headerButtonText, { color: colors.error }]}>
+                  Clear All
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+        <FlatList
+          data={notifications}
+          renderItem={renderNotification}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        />
+      </ResponsiveContainer>
     </SafeAreaView>
   );
 }
