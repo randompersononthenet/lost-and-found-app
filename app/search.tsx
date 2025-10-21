@@ -35,18 +35,9 @@ export default function SearchScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { width } = useWindowDimensions();
-  // Grid sizing for web/tablets: keep cards comfortably wide on large screens
-  const columns = width >= 800 ? 2 : 1;
-  const gridPadding = width >= 800 ? 24 : 12;
-  const gutter = 16;
-  const cardWidth = useMemo(() => {
-    if (columns > 1) {
-      const available = width - gridPadding * 2 - gutter * (columns - 1);
-      // Clamp to a reasonable max for readability
-      return Math.min(560, Math.floor(available / columns));
-    }
-    return Math.min(680, width - gridPadding * 2);
-  }, [width, columns]);
+  // Force single-column like feed
+  const columns = 1;
+  const gridPadding = 16;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'lost' | 'found'>('all');
   const [selectedItemCategory, setSelectedItemCategory] = useState<string>('all');
@@ -119,11 +110,7 @@ export default function SearchScreen() {
   };
 
   const performSearch = async () => {
-    if (!searchQuery.trim() && selectedCategory === 'all' && selectedItemCategory === 'all' && selectedStatus === 'active') {
-      setSearchResults([]);
-      setHasSearched(false);
-      return;
-    }
+    // Always run the search so default view shows posts (e.g., Active)
 
     setLoading(true);
     setHasSearched(true);
@@ -143,7 +130,10 @@ export default function SearchScreen() {
         .order('created_at', { ascending: false });
 
       if (searchQuery.trim()) {
-        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,location.ilike.%${searchQuery}%`);
+        const raw = searchQuery.trim();
+        const escaped = raw.replace(/[%_]/g, (m) => `\\${m}`);
+        const like = `%${escaped}%`;
+        query = query.or(`title.ilike.${like},description.ilike.${like},location.ilike.${like}`);
       }
 
       if (selectedCategory !== 'all') {
@@ -308,9 +298,9 @@ export default function SearchScreen() {
 
   const renderSearchResult = useCallback(({ item, index }: { item: SearchResult; index: number }) => (
     <InlineAnimated index={index}>
-      <View style={{ width: cardWidth, marginHorizontal: columns > 1 ? gutter / 2 : 0 }}>
+      <View style={{ width: '100%' }}>
       <TouchableOpacity 
-        style={[styles.resultCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        style={[styles.resultCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => {
           // Navigate to post detail or comments
           handleViewComments(item.id);
@@ -336,13 +326,23 @@ export default function SearchScreen() {
             </Text>
           </View>
         </TouchableOpacity>
-        <View style={[
-          styles.categoryBadge,
-          { backgroundColor: item.category === 'lost' ? colors.error : colors.success }
-        ]}>
-          <Text style={[styles.categoryText, { color: colors.card }]}>
-            {item.category.toUpperCase()}
-          </Text>
+        <View style={styles.postHeaderActions}>
+          <View style={[
+            styles.categoryBadge,
+            { backgroundColor: item.category === 'lost' ? colors.error : colors.success }
+          ]}>
+            <Text style={[styles.categoryText, { color: colors.card }]}> 
+              {item.category.toUpperCase()}
+            </Text>
+          </View>
+          <View style={[ 
+            styles.statusBadge,
+            { backgroundColor: item.status === 'resolved' ? colors.success : item.status === 'claimed' ? colors.warning : colors.primary }
+          ]}>
+            <Text style={[styles.statusText, { color: colors.card }]}> 
+              {item.status === 'resolved' ? 'Resolved' : item.status === 'claimed' ? 'Claimed' : 'Active'}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -506,13 +506,13 @@ export default function SearchScreen() {
       </TouchableOpacity>
       </View>
     </InlineAnimated>
-  ), [colors, handleViewComments, toggleLike, cardWidth, columns]);
+  ), [colors, handleViewComments, toggleLike]);
 
   const keyExtractor = useCallback((item: SearchResult) => item.id, []);
 
   const SkeletonCard = () => (
-    <View style={{ width: cardWidth, marginHorizontal: columns > 1 ? gutter / 2 : 0 }}>
-    <View style={[styles.resultCard, styles.resultCardGridAware, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+    <View style={{ width: '100%' }}>
+    <View style={[styles.resultCard, styles.resultCardGridAware, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
       <View style={{ padding: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
         <View style={[styles.avatar, { backgroundColor: colors.surface }]} />
         <View style={{ flex: 1, gap: 6 }}>
@@ -695,10 +695,10 @@ export default function SearchScreen() {
         data={loading && !hasSearched ? Array.from({ length: 5 }, (_, i) => ({ id: `skeleton-${i}` } as any)) : searchResults}
         renderItem={loading && !hasSearched ? (() => <SkeletonCard />) as any : renderSearchResult}
         keyExtractor={loading && !hasSearched ? ((item: any) => item.id) : keyExtractor}
-        contentContainerStyle={[styles.resultsContainer, { paddingHorizontal: gridPadding, alignItems: 'center' }]}
+        contentContainerStyle={[styles.resultsContainer, { paddingHorizontal: gridPadding, alignItems: 'stretch' }]}
         showsVerticalScrollIndicator={false}
-        numColumns={columns}
-        columnWrapperStyle={columns > 1 ? styles.resultsRow : undefined}
+        numColumns={1}
+        columnWrapperStyle={undefined}
         initialNumToRender={6}
         windowSize={7}
         maxToRenderPerBatch={8}
@@ -851,6 +851,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
+    // match feed card elevation/shadow for visual parity
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   resultCardGridAware: {
     flex: 1,
@@ -896,6 +902,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   categoryText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  postHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
     fontSize: 12,
     fontFamily: 'Inter-Medium',
   },
