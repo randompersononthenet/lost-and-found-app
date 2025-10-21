@@ -89,108 +89,98 @@ export const MessagingProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const typingDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [reactions, setReactions] = useState<Record<string, { counts: Record<string, number>; byMe?: string }>>({});
 
-  // Load conversations
+  // Load conversations (batched queries to avoid N+1)
   const loadConversations = useCallback(async () => {
     if (!user) return;
 
     try {
       setLoading(true);
-      
-      // First, get all conversations where the current user is a participant
+
+      // 1) All conversation IDs for current user
       const { data: participantData, error: participantError } = await supabase
         .from('conversation_participants')
-        .select('conversation_id')
+        .select('conversation_id, last_read_at')
         .eq('user_id', user.id);
-
       if (participantError) throw participantError;
-
       if (!participantData || participantData.length === 0) {
         setConversations([]);
         return;
       }
-
       const conversationIds = participantData.map(p => p.conversation_id);
+      const lastReadMap: Record<string, string | null> = {};
+      participantData.forEach((p: any) => { lastReadMap[p.conversation_id] = p.last_read_at || null; });
 
-      // Get conversations with their details
+      // 2) Fetch conversations in one query (limit columns)
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
-        .select('*')
+        .select('id, created_at, updated_at, last_message_at, last_message_content, last_message_sender_id')
         .in('id', conversationIds)
         .order('last_message_at', { ascending: false });
-
       if (conversationsError) throw conversationsError;
 
-      // Transform data to include participants and unread counts
-      const transformedConversations = await Promise.all(
-        (conversationsData || []).map(async (conv) => {
-          // Get participants excluding current user
-          const { data: participants } = await supabase
-            .from('conversation_participants')
-            .select('user_id')
-            .eq('conversation_id', conv.id)
-            .neq('user_id', user.id);
+      const convIdsSet = new Set((conversationsData || []).map(c => c.id));
 
-          // Get profile data for participants
-          const participantProfiles = await Promise.all(
-            (participants || []).map(async (participant) => {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('full_name, avatar_url')
-                .eq('id', participant.user_id)
-                .single();
-              
-              return {
-                user_id: participant.user_id,
-                full_name: profile?.full_name || 'Unknown User',
-                avatar_url: profile?.avatar_url,
-              };
-            })
-          );
+      // 3) Fetch all other participants for these conversations in a single call
+      const { data: allParticipants, error: participantsErr } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id, user_id')
+        .in('conversation_id', Array.from(convIdsSet))
+        .neq('user_id', user.id);
+      if (participantsErr) throw participantsErr;
 
-          // Get unread count
-          const { data: unreadData } = await supabase
-            .from('messages')
-            .select('id')
-            .eq('conversation_id', conv.id)
-            .neq('sender_id', user.id)
-            .gt('created_at', conv.last_message_at || '1970-01-01');
+      // 4) Fetch all needed profiles in one query
+      const uniqueUserIds = Array.from(new Set((allParticipants || []).map((p: any) => p.user_id)));
+      let profilesById: Record<string, { full_name: string; avatar_url?: string }> = {};
+      if (uniqueUserIds.length > 0) {
+        const { data: profilesData, error: profilesErr } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url')
+          .in('id', uniqueUserIds);
+        if (profilesErr) throw profilesErr;
+        (profilesData || []).forEach((pr: any) => { profilesById[pr.id] = { full_name: pr.full_name, avatar_url: pr.avatar_url }; });
+      }
 
-          return {
-            ...conv,
-            participants: participantProfiles,
-            unread_count: unreadData?.length || 0,
-          };
-        })
-      );
+      // 5) Assemble conversations with participants and a lightweight unread indicator
+      const convToParticipants: Record<string, Array<{ user_id: string; full_name: string; avatar_url?: string }>> = {};
+      (allParticipants || []).forEach((row: any) => {
+        const prof = profilesById[row.user_id] || { full_name: 'Unknown User' };
+        (convToParticipants[row.conversation_id] || (convToParticipants[row.conversation_id] = [])).push({
+          user_id: row.user_id,
+          full_name: prof.full_name,
+          avatar_url: prof.avatar_url,
+        });
+      });
 
-      // Deduplicate by participant set (excluding current user), prefer the latest last_message_at
+      const transformed = (conversationsData || []).map((conv: any) => {
+        const participants = convToParticipants[conv.id] || [];
+        // Unread indicator: if there is a newer last_message than my last_read_at, show 1, else 0
+        const lastRead = lastReadMap[conv.id] ? new Date(String(lastReadMap[conv.id])).getTime() : 0;
+        const lastMsg = conv.last_message_at ? new Date(String(conv.last_message_at)).getTime() : 0;
+        const unread_count = lastMsg > lastRead ? 1 : 0; // lightweight boolean badge
+        return { ...conv, participants, unread_count } as any;
+      });
+
+      // 6) Deduplicate by participant set (if needed) and sort
       const byParticipantKey = new Map<string, any>();
-      for (const conv of transformedConversations) {
-        const key = (conv.participants || [])
-          .map((p: any) => p.user_id)
-          .sort()
-          .join('|');
+      for (const conv of transformed) {
+        const key = (conv.participants || []).map((p: any) => p.user_id).sort().join('|');
         const existing = byParticipantKey.get(key);
-        if (!existing) {
-          byParticipantKey.set(key, conv);
-        } else {
+        if (!existing) byParticipantKey.set(key, conv);
+        else {
           const a = new Date(existing.last_message_at || existing.updated_at || existing.created_at || 0).getTime();
           const b = new Date(conv.last_message_at || conv.updated_at || conv.created_at || 0).getTime();
           if (b > a) byParticipantKey.set(key, conv);
         }
       }
-      const uniqueConversations = Array.from(byParticipantKey.values()).sort((a: any, b: any) => 
+      const uniqueConversations = Array.from(byParticipantKey.values()).sort((a: any, b: any) =>
         new Date(b.last_message_at || b.updated_at || b.created_at || 0).getTime() -
         new Date(a.last_message_at || a.updated_at || a.created_at || 0).getTime()
       );
+
       setConversations(uniqueConversations);
     } catch (error) {
       console.error('Error loading conversations:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to load conversations',
-      });
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load conversations' });
     } finally {
       setLoading(false);
     }
