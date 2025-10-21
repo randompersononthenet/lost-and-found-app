@@ -9,6 +9,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import UserProfileModal from '@/components/UserProfileModal';
 import { sendCommentNotification } from '@/lib/pushNotifications';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 interface Comment {
   id: string;
@@ -347,61 +348,64 @@ export default function CommentsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Comments</Text>
-          <Text style={[styles.postTitle, { color: colors.textSecondary }]}>
-            {post.title}
-          </Text>
-        </View>
-      </View>
-
-      {/* Comments List */}
-      <FlatList
-        data={comments}
-        renderItem={renderComment}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.commentsList}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              No comments yet. Be the first to comment!
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <ResponsiveContainer>
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Comments</Text>
+            <Text style={[styles.postTitle, { color: colors.textSecondary }]}> 
+              {post.title}
             </Text>
           </View>
-        }
-      />
+        </View>
 
-      {/* Comment Input */}
-      <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-        <TextInput
-          style={[styles.commentInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
-          placeholder="Add a comment..."
-          placeholderTextColor={colors.textSecondary}
-          value={newComment}
-          onChangeText={setNewComment}
-          multiline
-          maxLength={500}
+        {/* Comments List */}
+        <FlatList
+          style={{ flex: 1 }}
+          data={comments}
+          renderItem={renderComment}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.commentsList}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}> 
+                No comments yet. Be the first to comment!
+              </Text>
+            </View>
+          }
         />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            {
-              backgroundColor: newComment.trim() ? colors.primary : colors.border,
-              opacity: newComment.trim() && !submitting ? 1 : 0.6,
-            }
-          ]}
-          onPress={handleSubmitComment}
-          disabled={!newComment.trim() || submitting}
-        >
-          <Send size={20} color={colors.card} />
-        </TouchableOpacity>
-      </View>
+
+        {/* Comment Input */}
+        <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}> 
+          <TextInput
+            style={[styles.commentInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+            placeholder="Add a comment..."
+            placeholderTextColor={colors.textSecondary}
+            value={newComment}
+            onChangeText={setNewComment}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              {
+                backgroundColor: newComment.trim() ? colors.primary : colors.border,
+                opacity: newComment.trim() && !submitting ? 1 : 0.6,
+              }
+            ]}
+            onPress={handleSubmitComment}
+            disabled={!newComment.trim() || submitting}
+          >
+            <Send size={20} color={colors.card} />
+          </TouchableOpacity>
+        </View>
+      </ResponsiveContainer>
 
       {/* User Profile Modal */}
       <UserProfileModal
