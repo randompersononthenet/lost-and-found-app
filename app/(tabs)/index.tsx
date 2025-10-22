@@ -1089,7 +1089,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   actionButton: {
     flexDirection: 'row',
