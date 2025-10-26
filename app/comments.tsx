@@ -76,6 +76,7 @@ export default function CommentsScreen() {
       if (error) throw error;
       
       // Transform the data to match the Post interface
+      const prof: any = Array.isArray((data as any).profiles) ? (data as any).profiles[0] : (data as any).profiles;
       const transformedData: Post = {
         id: data.id,
         title: data.title,
@@ -84,7 +85,7 @@ export default function CommentsScreen() {
         images: data.images,
         user_id: data.user_id,
         profiles: {
-          full_name: data.profiles?.[0]?.full_name || 'Unknown User'
+          full_name: prof?.full_name || 'Unknown User'
         }
       };
       
@@ -120,16 +121,19 @@ export default function CommentsScreen() {
       if (error) throw error;
       
       // Transform the data to match the Comment interface
-      const transformedComments: Comment[] = (data || []).map(comment => ({
-        id: comment.id,
-        content: comment.content,
-        created_at: comment.created_at,
-        user_id: comment.user_id,
-        profiles: {
-          full_name: comment.profiles?.[0]?.full_name || 'Unknown User',
-          avatar_url: comment.profiles?.[0]?.avatar_url
-        }
-      }));
+      const transformedComments: Comment[] = (data || []).map((comment: any) => {
+        const prof = Array.isArray(comment.profiles) ? comment.profiles[0] : comment.profiles;
+        return {
+          id: comment.id,
+          content: comment.content,
+          created_at: comment.created_at,
+          user_id: comment.user_id,
+          profiles: {
+            full_name: prof?.full_name || 'Unknown User',
+            avatar_url: prof?.avatar_url,
+          },
+        };
+      });
       
       setComments(transformedComments);
     } catch (error) {
