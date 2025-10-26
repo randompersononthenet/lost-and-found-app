@@ -14,6 +14,7 @@ export default function ProfileScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [genderPickerVisible, setGenderPickerVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [yearLevelPickerVisible, setYearLevelPickerVisible] = useState(false);
   const [signOutConfirmVisible, setSignOutConfirmVisible] = useState(false);
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
   const [deactivateModalVisible, setDeactivateModalVisible] = useState(false);
@@ -40,6 +41,13 @@ export default function ProfileScreen() {
     { label: 'Female', value: 'female' },
     { label: 'Other', value: 'other' },
     { label: 'Prefer not to say', value: 'prefer_not_to_say' },
+  ];
+  const yearLevelOptions = [
+    '1st Year',
+    '2nd Year',
+    '3rd Year',
+    '4th Year',
+    '5th Year',
   ];
 
   // Helper function to format date for display
@@ -541,13 +549,17 @@ export default function ProfileScreen() {
 
               <View style={styles.inputGroup}>
                 <Text style={[styles.inputLabel, { color: colors.text }]}>Year Level</Text>
-                <TextInput
-                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                  value={editForm.year_level}
-                  onChangeText={(text) => setEditForm(prev => ({ ...prev, year_level: text }))}
-                  placeholder="e.g., 1st Year, 2nd Year"
-                  placeholderTextColor={colors.textSecondary}
-                />
+                <TouchableOpacity
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => setYearLevelPickerVisible(true)}
+                >
+                  <View style={styles.pickerContainer}>
+                    <Text style={[styles.pickerText, { color: editForm.year_level ? colors.text : colors.textSecondary }]}> 
+                      {editForm.year_level || 'Select year level'}
+                    </Text>
+                    <ChevronDown size={20} color={colors.textSecondary} />
+                  </View>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.inputGroup}>
@@ -700,6 +712,64 @@ export default function ProfileScreen() {
             )}
           </View>
         </SafeAreaView>
+      </Modal>
+
+      {/* Gender Picker Modal */}
+      <Modal
+        visible={genderPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setGenderPickerVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 16, width: '88%', borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter-SemiBold', color: colors.text, marginBottom: 12 }}>Select Gender</Text>
+            {genderOptions.map(opt => (
+              <TouchableOpacity
+                key={opt.value}
+                style={{ paddingVertical: 10 }}
+                onPress={() => { setEditForm(prev => ({ ...prev, gender: opt.value })); setGenderPickerVisible(false); }}
+              >
+                <Text style={{ color: colors.text }}>{opt.label}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={{ marginTop: 8, paddingVertical: 12, borderRadius: 8, backgroundColor: colors.border, alignItems: 'center' }}
+              onPress={() => setGenderPickerVisible(false)}
+            >
+              <Text style={{ color: colors.text, fontFamily: 'Inter-SemiBold' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Year Level Picker Modal */}
+      <Modal
+        visible={yearLevelPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setYearLevelPickerVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 16, width: '88%', borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter-SemiBold', color: colors.text, marginBottom: 12 }}>Select Year Level</Text>
+            {yearLevelOptions.map(level => (
+              <TouchableOpacity
+                key={level}
+                style={{ paddingVertical: 10 }}
+                onPress={() => { setEditForm(prev => ({ ...prev, year_level: level })); setYearLevelPickerVisible(false); }}
+              >
+                <Text style={{ color: colors.text }}>{level}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={{ marginTop: 8, paddingVertical: 12, borderRadius: 8, backgroundColor: colors.border, alignItems: 'center' }}
+              onPress={() => setYearLevelPickerVisible(false)}
+            >
+              <Text style={{ color: colors.text, fontFamily: 'Inter-SemiBold' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       {/* Deactivate Account Modal */}
