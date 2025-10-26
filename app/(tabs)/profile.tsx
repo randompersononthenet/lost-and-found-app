@@ -401,6 +401,84 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
+      {/* Change Password Modal */}
+      <Modal visible={changePasswordModalVisible} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}> 
+          <ResponsiveContainer variant="modal">
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
+              <TouchableOpacity onPress={() => setChangePasswordModalVisible(false)}>
+                <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Change Password</Text>
+              <TouchableOpacity onPress={handleChangePassword} disabled={loading}>
+                <Text style={[styles.modalSave, { color: colors.primary }]}>{loading ? 'Saving...' : 'Save'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Current Password</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={passwordForm.currentPassword}
+                  onChangeText={(text) => setPasswordForm(prev => ({ ...prev, currentPassword: text }))}
+                  placeholder="Enter your current password"
+                  placeholderTextColor={colors.textSecondary}
+                  secureTextEntry
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>New Password</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={passwordForm.newPassword}
+                  onChangeText={(text) => setPasswordForm(prev => ({ ...prev, newPassword: text }))}
+                  placeholder="Enter a new password"
+                  placeholderTextColor={colors.textSecondary}
+                  secureTextEntry
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Confirm New Password</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={passwordForm.confirmPassword}
+                  onChangeText={(text) => setPasswordForm(prev => ({ ...prev, confirmPassword: text }))}
+                  placeholder="Re-enter the new password"
+                  placeholderTextColor={colors.textSecondary}
+                  secureTextEntry
+                />
+              </View>
+            </ScrollView>
+          </ResponsiveContainer>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Sign Out Confirmation Modal */}
+      <Modal
+        visible={signOutConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSignOutConfirmVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 16, width: '88%', borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter-SemiBold', color: colors.text, marginBottom: 8 }}>Sign Out</Text>
+            <Text style={{ color: colors.textSecondary, marginBottom: 16 }}>Are you sure you want to sign out?</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+              <TouchableOpacity onPress={() => setSignOutConfirmVisible(false)} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ color: colors.text }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSignOut} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: colors.error }}>
+                <Text style={{ color: colors.card, fontFamily: 'Inter-SemiBold' }}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Edit Profile Modal */}
       <Modal visible={editModalVisible} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}> 
