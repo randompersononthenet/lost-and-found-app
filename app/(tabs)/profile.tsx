@@ -83,6 +83,10 @@ export default function ProfileScreen() {
     setSignOutConfirmVisible(false); // Hide modal
     try {
       await signOut();
+      // give time for auth state to propagate before navigating
+      setTimeout(() => {
+        router.replace('/auth');
+      }, 10);
     } catch (error) {
       Toast.show({
         type: 'error',
