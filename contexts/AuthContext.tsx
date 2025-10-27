@@ -40,8 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const mounted = useRef(false);
   const [isPasswordResetFlow, setIsPasswordResetFlow] = useState(false);
 
-  const loadProfile = async (userId: string) => {
-    if (!mounted.current) return;
+  const loadProfile = async (userId: string): Promise<boolean> => {
+    if (!mounted.current) return false;
     
     try {
       const { data, error } = await supabase
@@ -54,25 +54,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error.code === 'PGRST116') {
           // No profile found - this is expected for new users
           setProfile(null);
-          return;
+          return false;
         }
         console.error('Error loading profile:', error);
-        return;
+        return false;
       }
 
       if (data) {
         setProfile(data);
+        return true;
       }
+      return false;
     } catch (error) {
       // Check if the caught error is the PGRST116 error and suppress it
       if (error && typeof error === 'object' && 'code' in error && error.code === 'PGRST116') {
         setProfile(null);
-        return;
+        return false;
       }
       // Log other unexpected errors
       if (error) {
         console.error('Error loading profile:', error);
       }
+      return false;
     }
   };
 
@@ -84,7 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setUser(session.user);
-          await loadProfile(session.user.id);
+          const hasProfile = await loadProfile(session.user.id);
+          if (!hasProfile) {
+            // Treat as deactivated: sign out immediately
+            await supabase.auth.signOut({ scope: 'global' });
+            setUser(null);
+            setProfile(null);
+          }
         }
         const initialUrl = await Linking.getInitialURL();
         if (initialUrl) {
@@ -116,7 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsPasswordResetFlow(true);
         } else if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
-          await loadProfile(session.user.id);
+          const hasProfile = await loadProfile(session.user.id);
+          if (!hasProfile) {
+            await supabase.auth.signOut({ scope: 'global' });
+            setUser(null);
+            setProfile(null);
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setProfile(null);
@@ -157,6 +171,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (error) throw error;
+    // After sign in, verify profile exists; if missing, treat as deactivated and sign out
+    const { data: { session } } = await supabase.auth.getSession();
+    const u = session?.user;
+    if (u) {
+      const hasProfile = await loadProfile(u.id);
+      if (!hasProfile) {
+        await supabase.auth.signOut({ scope: 'global' });
+        setUser(null);
+        setProfile(null);
+        throw new Error('This account has been deactivated.');
+      }
+    }
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {

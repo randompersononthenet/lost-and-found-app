@@ -229,34 +229,27 @@ export default function ProfileScreen() {
       return;
     }
 
-    Alert.alert(
-      'Deactivate Account',
-      'Are you sure you want to deactivate your account? This action cannot be undone and all your data will be permanently deleted.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Deactivate', style: 'destructive', onPress: async () => {
-            setLoading(true);
-            try {
-              await deactivateAccount(deactivatePassword);
-              Toast.show({
-                type: 'success',
-                text1: 'Account Deactivated',
-                text2: 'Your account has been deactivated',
-              });
-            } catch (error: any) {
-              Toast.show({
-                type: 'error',
-                text1: 'Error',
-                text2: error.message || 'Failed to deactivate account',
-              });
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    );
+    // Perform deactivation directly (Alert.alert is not supported on web)
+    setLoading(true);
+    try {
+      await deactivateAccount(deactivatePassword);
+      Toast.show({
+        type: 'success',
+        text1: 'Account Deactivated',
+        text2: 'Your account has been deactivated',
+      });
+      setDeactivateModalVisible(false);
+      setDeactivatePassword('');
+      router.replace('/auth');
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to deactivate account',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
