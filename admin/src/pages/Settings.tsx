@@ -13,6 +13,7 @@ import { Settings as SettingsIcon, Save, Eye, AlertTriangle, CheckCircle, Loader
 export default function Settings() {
 	const [bannerText, setBannerText] = useState('')
 	const [maintenanceMode, setMaintenanceMode] = useState(false)
+	const [downloadUrl, setDownloadUrl] = useState('')
 	const [preview, setPreview] = useState('')
 	const [loading, setLoading] = useState(true)
 	const [saving, setSaving] = useState(false)
@@ -24,13 +25,14 @@ export default function Settings() {
 			setError(null)
 			const { data, error } = await supabase
 				.from('app_settings')
-				.select('maintenance_banner_text, maintenance_mode')
+				.select('maintenance_banner_text, maintenance_mode, download_url')
 				.eq('id', 1)
 				.single()
 			if (error) setError(error.message)
 			if (data) {
 				setBannerText(data.maintenance_banner_text || '')
 				setMaintenanceMode(!!data.maintenance_mode)
+				setDownloadUrl(data.download_url || '')
 			}
 			setLoading(false)
 		}
@@ -46,7 +48,7 @@ export default function Settings() {
 		setError(null)
 		const { error } = await supabase
 			.from('app_settings')
-			.update({ maintenance_banner_text: bannerText.trim(), maintenance_mode: maintenanceMode, updated_at: new Date().toISOString() })
+			.update({ maintenance_banner_text: bannerText.trim(), maintenance_mode: maintenanceMode, download_url: downloadUrl.trim() || null, updated_at: new Date().toISOString() })
 			.eq('id', 1)
 		if (error) setError(error.message)
 		setSaving(false)
@@ -93,6 +95,21 @@ export default function Settings() {
 									<div className="form-hint">
 										<Info size={14} />
 										<span>This message will be displayed to all users when maintenance mode is enabled</span>
+									</div>
+								</div>
+
+								<div className="form-group">
+									<label className="form-label">Mobile Download URL (web banner)</label>
+									<input
+										type="url"
+										className="form-input"
+										placeholder="https://expo.dev/accounts/.../projects/.../builds/..."
+										value={downloadUrl}
+										onChange={(e) => setDownloadUrl(e.target.value)}
+									/>
+									<div className="form-hint">
+										<Info size={14} />
+										<span>Shown only on the web client as a floating “Download App” button. Leave blank to hide.</span>
 									</div>
 								</div>
 
@@ -172,6 +189,12 @@ export default function Settings() {
 								<span className="status-label">Banner Text:</span>
 								<span className="status-value">
 									{bannerText.trim() ? `${bannerText.length} characters` : 'Not set'}
+								</span>
+							</div>
+							<div className="status-item">
+								<span className="status-label">Download URL:</span>
+								<span className="status-value">
+									{downloadUrl.trim() ? 'Configured' : 'Not set'}
 								</span>
 							</div>
 							<div className="status-item">
