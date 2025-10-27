@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessaging } from '@/contexts/MessagingContext';
@@ -89,17 +90,18 @@ export default function UserProfileModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <X size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
-          <View style={{ width: 24 }} />
-        </View>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+        <ResponsiveContainer variant="modal">
+          {/* Header */}
+          <View style={[styles.header, { borderBottomColor: colors.border }]}> 
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <X size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+            <View style={{ width: 24 }} />
+          </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Profile Header */}
           <View style={[styles.profileHeader, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
@@ -192,7 +194,8 @@ export default function UserProfileModal({
               </TouchableOpacity>
             </View>
           )}
-        </ScrollView>
+          </ScrollView>
+        </ResponsiveContainer>
       </SafeAreaView>
     </Modal>
   );
