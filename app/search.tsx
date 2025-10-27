@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, Modal, useWindowDimensions, Platform, UIManager, LayoutAnimation, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, Modal, useWindowDimensions, Platform, UIManager, LayoutAnimation, Animated, Easing, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,7 +34,7 @@ interface SearchResult {
 export default function SearchScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   // Force single-column like feed
   const columns = 1;
   const gridPadding = 16;
@@ -648,34 +648,37 @@ export default function SearchScreen() {
             onStartShouldSetResponder={() => true}
           >
             <Text style={[styles.modalTitle, { color: colors.text }]}>Filters</Text>
-            <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Item Type</Text>
-            {itemCategories.map((category) => (
-              <TouchableOpacity
-                key={category.key}
-                style={[styles.modalOption, { borderBottomColor: colors.border }]}
-                onPress={() => setSelectedItemCategory(category.key)}
-              >
-                <Text style={[styles.modalOptionText, { color: selectedItemCategory === category.key ? colors.primary : colors.text }]}>
-                  {category.label}
-                </Text>
-                {selectedItemCategory === category.key && (<View style={[styles.checkmark, { backgroundColor: colors.primary }]} />)}
-              </TouchableOpacity>
-            ))}
+            <ScrollView style={{ maxHeight: Math.max(240, height * 0.6) }} showsVerticalScrollIndicator>
+              <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Item Type</Text>
+              {itemCategories.map((category) => (
+                <TouchableOpacity
+                  key={category.key}
+                  style={[styles.modalOption, { borderBottomColor: colors.border }]}
+                  onPress={() => setSelectedItemCategory(category.key)}
+                >
+                  <Text style={[styles.modalOptionText, { color: selectedItemCategory === category.key ? colors.primary : colors.text }]}> 
+                    {category.label}
+                  </Text>
+                  {selectedItemCategory === category.key && (<View style={[styles.checkmark, { backgroundColor: colors.primary }]} />)}
+                </TouchableOpacity>
+              ))}
+              <View style={{ height: 12 }} />
+              <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Status</Text>
+              {statusOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[styles.modalOption, { borderBottomColor: colors.border }]}
+                  onPress={() => setSelectedStatus(option.key as any)}
+                >
+                  <Text style={[styles.modalOptionText, { color: selectedStatus === option.key ? colors.primary : colors.text }]}> 
+                    {option.label}
+                  </Text>
+                  {selectedStatus === option.key && (<View style={[styles.checkmark, { backgroundColor: colors.primary }]} />)}
+                </TouchableOpacity>
+              ))}
+              <View style={{ height: 8 }} />
+            </ScrollView>
             <View style={{ height: 12 }} />
-            <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Status</Text>
-            {statusOptions.map((option) => (
-              <TouchableOpacity
-                key={option.key}
-                style={[styles.modalOption, { borderBottomColor: colors.border }]}
-                onPress={() => setSelectedStatus(option.key as any)}
-              >
-                <Text style={[styles.modalOptionText, { color: selectedStatus === option.key ? colors.primary : colors.text }]}>
-                  {option.label}
-                </Text>
-                {selectedStatus === option.key && (<View style={[styles.checkmark, { backgroundColor: colors.primary }]} />)}
-              </TouchableOpacity>
-            ))}
-            <View style={{ height: 16 }} />
             <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
               <TouchableOpacity onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setSelectedItemCategory('all'); setSelectedStatus('all'); }}>
                 <Text style={{ color: colors.textSecondary }}>Reset</Text>
