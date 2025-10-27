@@ -14,6 +14,7 @@ export default function Settings() {
 	const [bannerText, setBannerText] = useState('')
 	const [maintenanceMode, setMaintenanceMode] = useState(false)
 	const [downloadUrl, setDownloadUrl] = useState('')
+	const [maintenanceLevel, setMaintenanceLevel] = useState<'banner' | 'full_lockout'>('banner')
 	const [preview, setPreview] = useState('')
 	const [loading, setLoading] = useState(true)
 	const [saving, setSaving] = useState(false)
@@ -25,7 +26,7 @@ export default function Settings() {
 			setError(null)
 			const { data, error } = await supabase
 				.from('app_settings')
-				.select('maintenance_banner_text, maintenance_mode, download_url')
+				.select('maintenance_banner_text, maintenance_mode, download_url, maintenance_level')
 				.eq('id', 1)
 				.single()
 			if (error) setError(error.message)
@@ -33,6 +34,7 @@ export default function Settings() {
 				setBannerText(data.maintenance_banner_text || '')
 				setMaintenanceMode(!!data.maintenance_mode)
 				setDownloadUrl(data.download_url || '')
+				setMaintenanceLevel((data.maintenance_level as any) === 'full_lockout' ? 'full_lockout' : 'banner')
 			}
 			setLoading(false)
 		}
@@ -48,7 +50,7 @@ export default function Settings() {
 		setError(null)
 		const { error } = await supabase
 			.from('app_settings')
-			.update({ maintenance_banner_text: bannerText.trim(), maintenance_mode: maintenanceMode, download_url: downloadUrl.trim() || null, updated_at: new Date().toISOString() })
+			.update({ maintenance_banner_text: bannerText.trim(), maintenance_mode: maintenanceMode, maintenance_level: maintenanceLevel, download_url: downloadUrl.trim() || null, updated_at: new Date().toISOString() })
 			.eq('id', 1)
 		if (error) setError(error.message)
 		setSaving(false)
@@ -110,6 +112,22 @@ export default function Settings() {
 									<div className="form-hint">
 										<Info size={14} />
 										<span>Shown only on the web client as a floating “Download App” button. Leave blank to hide.</span>
+									</div>
+								</div>
+
+								<div className="form-group">
+									<label className="form-label">Maintenance Level</label>
+									<select
+										className="form-select"
+										value={maintenanceLevel}
+										onChange={(e) => setMaintenanceLevel((e.target.value as 'banner' | 'full_lockout'))}
+									>
+										<option value="banner">Banner only (app usable)</option>
+										<option value="full_lockout">Full lockout (show maintenance screen)</option>
+									</select>
+									<div className="form-hint">
+										<Info size={14} />
+										<span>Choose how maintenance is applied. Toggle "Enable Maintenance Mode" to activate.</span>
 									</div>
 								</div>
 
@@ -196,6 +214,10 @@ export default function Settings() {
 								<span className="status-value">
 									{downloadUrl.trim() ? 'Configured' : 'Not set'}
 								</span>
+							</div>
+							<div className="status-item">
+								<span className="status-label">Maintenance Level:</span>
+								<span className="status-value">{maintenanceLevel === 'full_lockout' ? 'Full lockout' : 'Banner only'}</span>
 							</div>
 							<div className="status-item">
 								<span className="status-label">Last Updated:</span>
