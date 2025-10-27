@@ -177,11 +177,10 @@ export default function AuthScreen() {
             {/* Email */}
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>Educational Email</Text>
-              <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.emailPrefix, { color: colors.textSecondary }]}>@</Text>
+              <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
                 <TextInput
-                  style={[styles.textInput, { color: colors.text }]}
-                  placeholder="student@university.edu"
+                  style={[styles.textInputFull, { color: colors.text }]}
+                  placeholder="Enter you email here"
                   placeholderTextColor={colors.textSecondary}
                   value={email}
                   onChangeText={setEmail}
@@ -189,7 +188,7 @@ export default function AuthScreen() {
                   autoCapitalize="none"
                 />
               </View>
-              <Text style={[styles.helpText, { color: colors.textSecondary }]}>
+              <Text style={[styles.helpText, { color: colors.textSecondary }]}> 
                 Only educational (.edu) emails are allowed
               </Text>
             </View>
