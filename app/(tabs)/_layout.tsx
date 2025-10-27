@@ -5,6 +5,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { Platform, useWindowDimensions, View, Text, Image } from 'react-native';
 import { TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
+import ResponsiveContainer from '@/components/ResponsiveContainer';
 
 export default function TabLayout() {
   const { colors } = useTheme();
@@ -20,36 +21,37 @@ export default function TabLayout() {
         header: hideTabs
           ? () => (
               <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
                 paddingHorizontal: 20,
                 paddingVertical: 12,
                 borderBottomWidth: 1,
                 borderBottomColor: colors.border,
                 backgroundColor: colors.surface,
               }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Image source={require('../../logo.png')} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
-                  <Text style={{ color: colors.text, fontFamily: 'Inter-Bold', fontSize: 18 }}>RECLAIM</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <TouchableOpacity onPress={() => router.push('/(tabs)')} style={{ padding: 8, marginRight: 4 }}>
-                    <Home size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => router.push('/search')} style={{ padding: 8, marginRight: 4 }}>
-                    <SearchIcon size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => router.push('/(tabs)/create')} style={{ padding: 8, marginRight: 4 }}>
-                    <Plus size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => router.push('/(tabs)/messages')} style={{ padding: 8, marginRight: 4 }}>
-                    <MessageCircle size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={{ padding: 8 }}>
-                    <User size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+                <ResponsiveContainer>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <TouchableOpacity onPress={() => router.push('/(tabs)')} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Image source={require('../../logo.png')} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
+                      <Text style={{ color: colors.text, fontFamily: 'Inter-Bold', fontSize: 18 }}>RECLAIM</Text>
+                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <TouchableOpacity onPress={() => router.push('/(tabs)')} style={{ padding: 8, marginRight: 4 }}>
+                        <Home size={20} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => router.push('/search')} style={{ padding: 8, marginRight: 4 }}>
+                        <SearchIcon size={20} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => router.push('/(tabs)/create')} style={{ padding: 8, marginRight: 4 }}>
+                        <Plus size={20} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => router.push('/(tabs)/messages')} style={{ padding: 8, marginRight: 4 }}>
+                        <MessageCircle size={20} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={{ padding: 8 }}>
+                        <User size={20} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </ResponsiveContainer>
               </View>
             )
           : undefined,
