@@ -13,6 +13,7 @@ export default function PasswordResetScreen() {
   const [password, setPassword] = React.useState('');
   const [confirm, setConfirm] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [longWait, setLongWait] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
 
@@ -27,16 +28,25 @@ export default function PasswordResetScreen() {
 
   React.useEffect(() => {
     let active = true;
+    let timer: any;
     (async () => {
       if (!code) return;
       try {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error && active) setError(error.message);
+        // If session already exists, skip exchange (it may have been handled globally)
+        const { data: sess } = await supabase.auth.getSession();
+        if (!sess.session) {
+          timer = setTimeout(() => { if (active) setLongWait(true); }, 4000);
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error && active) setError(error.message);
+        }
       } catch (e: any) {
         if (active) setError(e?.message || 'Failed to start reset session');
+      } finally {
+        if (timer) clearTimeout(timer);
+        if (active) setLongWait(false);
       }
     })();
-    return () => { active = false; };
+    return () => { active = false; if (timer) clearTimeout(timer); };
   }, [code]);
 
   const handleUpdate = async () => {
@@ -46,7 +56,9 @@ export default function PasswordResetScreen() {
       setError('Passwords do not match.');
       return;
     }
+    if (loading) return; // guard duplicates
     setLoading(true);
+    const timer = setTimeout(() => setLongWait(true), 4000);
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
@@ -56,6 +68,8 @@ export default function PasswordResetScreen() {
       setError(e?.message || 'Failed to update password.');
     } finally {
       setLoading(false);
+      clearTimeout(timer);
+      setLongWait(false);
     }
   };
 
@@ -88,6 +102,9 @@ export default function PasswordResetScreen() {
                 />
               </View>
               {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
+              {longWait && !error && !success ? (
+                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Still working... this can take a few seconds.</Text>
+              ) : null}
               {success ? <Text style={{ color: colors.success, marginTop: 8 }}>{success}</Text> : null}
               <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]} onPress={handleUpdate} disabled={loading}>
                 <Text style={[styles.buttonText, { color: colors.card }]}>{loading ? 'Updating...' : 'Update Password'}</Text>
