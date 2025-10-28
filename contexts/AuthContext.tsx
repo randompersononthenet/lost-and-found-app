@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import * as Linking from 'expo-linking';
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -282,7 +283,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!email.endsWith('.edu') && !email.endsWith('.edu.ph')) {
       throw new Error('Please use your educational email address (.edu or .edu.ph)');
     }
-    const redirectTo = 'recall://auth/reset?type=recovery';
+    const redirectTo = Platform.OS === 'web'
+      ? `${window.location.origin}/auth/reset?type=recovery`
+      : Linking.createURL('/auth/reset?type=recovery');
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) throw error;
   };

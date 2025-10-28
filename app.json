@@ -24,7 +24,16 @@
         "RECEIVE_BOOT_COMPLETED",
         "WAKE_LOCK"
       ],
-      "package": "com.aedriansagap.recall"
+      "package": "com.aedriansagap.recall",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            { "scheme": "recall" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -43,7 +52,7 @@
     },
     "owner": "aedriansagap",
     "extra": {
-      "router": {},
+      "router": { "origin": "*" },
       "eas": {
         "projectId": "267904ae-d850-4dba-b5c4-530f78abad0c"
       }
