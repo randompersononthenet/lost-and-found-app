@@ -175,12 +175,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { session } } = await supabase.auth.getSession();
     const u = session?.user;
     if (u) {
-      const hasProfile = await loadProfile(u.id);
+      let hasProfile = await loadProfile(u.id);
       if (!hasProfile) {
-        await supabase.auth.signOut({ scope: 'global' });
-        setUser(null);
-        setProfile(null);
-        throw new Error('This account has been deactivated.');
+        // Retry briefly in case DB trigger is still creating profile
+        for (let i = 0; i < 5 && !hasProfile; i++) {
+          await new Promise(r => setTimeout(r, 500));
+          hasProfile = await loadProfile(u.id);
+        }
+      }
+      if (!hasProfile) {
+        // Try to create the profile now that we have a session (avoids RLS issues)
+        try {
+          await supabase.from('profiles').upsert({
+            id: u.id,
+            email: u.email!,
+            full_name: (u.user_metadata as any)?.full_name || u.email || 'User',
+          }, { onConflict: 'id' });
+          // Reload
+          hasProfile = await loadProfile(u.id);
+        } catch (e) {
+          // ignore and fall through to deactivated handling
+        }
+
+        if (!hasProfile) {
+          await supabase.auth.signOut({ scope: 'global' });
+          setUser(null);
+          setProfile(null);
+          throw new Error('This account has been deactivated.');
+        }
       }
     }
   };
@@ -203,26 +225,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (authError) throw authError;
 
     if (authData.user) {
-      // Create profile and wait for it to be created
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email: authData.user.email!,
-          full_name: fullName,
-        })
-        .select()
-        .single();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const hasSession = !!sessionData.session?.access_token;
+      if (hasSession) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .upsert({
+            id: authData.user.id,
+            email: authData.user.email!,
+            full_name: fullName,
+          }, { onConflict: 'id' })
+          .select()
+          .single();
 
-      if (error) {
-        console.error('Profile creation error:', error);
-        throw new Error('Failed to create user profile');
+        if (error) {
+          console.error('Profile creation error:', error);
+          throw new Error('Failed to create user profile');
+        }
+
+        if (data && mounted.current) {
+          setProfile(data);
+        }
       }
-      
-      // Set the profile directly from the insert result
-      if (data && mounted.current) {
-        setProfile(data);
-      }
+      // If no session, rely on DB trigger to create the profile row after auth user creation
     }
   };
 
