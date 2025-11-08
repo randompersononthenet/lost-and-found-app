@@ -52,7 +52,6 @@
     },
     "owner": "aedriansagap",
     "extra": {
-      "router": { "origin": "*" },
       "eas": {
         "projectId": "267904ae-d850-4dba-b5c4-530f78abad0c"
       }

@@ -100,10 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (initialUrl) {
           const parsed = Linking.parse(initialUrl);
           const type = (parsed.queryParams as any)?.type;
-          const code = (parsed.queryParams as any)?.code as string | undefined;
-          if (type === 'recovery' && code) {
-            const { error } = await supabase.auth.exchangeCodeForSession(code);
-            if (!error) setIsPasswordResetFlow(true);
+          if (type === 'recovery') {
+            setIsPasswordResetFlow(true);
           }
         }
       } catch (error) {
@@ -142,14 +140,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    const urlListener = Linking.addEventListener('url', async ({ url }) => {
+    const urlListener = Linking.addEventListener('url', ({ url }) => {
       try {
         const parsed = Linking.parse(url);
         const type = (parsed.queryParams as any)?.type;
-        const code = (parsed.queryParams as any)?.code as string | undefined;
-        if (type === 'recovery' && code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (!error) setIsPasswordResetFlow(true);
+        if (type === 'recovery') {
+          setIsPasswordResetFlow(true);
         }
       } catch (e) {}
     });

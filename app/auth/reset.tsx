@@ -16,6 +16,7 @@ export default function PasswordResetScreen() {
   const [longWait, setLongWait] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
+  const [sessionReady, setSessionReady] = React.useState(false);
 
   const code = (params?.code as string) || '';
 
@@ -39,6 +40,8 @@ export default function PasswordResetScreen() {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error && active) setError(error.message);
         }
+        const { data: after } = await supabase.auth.getSession();
+        if (active) setSessionReady(!!after.session);
       } catch (e: any) {
         if (active) setError(e?.message || 'Failed to start reset session');
       } finally {
@@ -56,11 +59,19 @@ export default function PasswordResetScreen() {
       setError('Passwords do not match.');
       return;
     }
+    if (!sessionReady) {
+      setError('Session not ready. Please try again in a moment.');
+      return;
+    }
     if (loading) return; // guard duplicates
     setLoading(true);
     const timer = setTimeout(() => setLongWait(true), 4000);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const updatePromise = supabase.auth.updateUser({ password });
+      const timeoutPromise = new Promise<"TIMEOUT">((resolve) => setTimeout(() => resolve("TIMEOUT"), 10000));
+      const raced = (await Promise.race([updatePromise as Promise<any>, timeoutPromise])) as any;
+      if (raced === "TIMEOUT") throw new Error('Request timed out');
+      const { error } = raced as { error?: any };
       if (error) throw error;
       setSuccess('Password updated. You can now sign in.');
       setTimeout(() => router.replace('/auth'), 800);
@@ -106,7 +117,7 @@ export default function PasswordResetScreen() {
                 <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Still working... this can take a few seconds.</Text>
               ) : null}
               {success ? <Text style={{ color: colors.success, marginTop: 8 }}>{success}</Text> : null}
-              <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]} onPress={handleUpdate} disabled={loading}>
+              <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]} onPress={handleUpdate} disabled={loading || !sessionReady}>
                 <Text style={[styles.buttonText, { color: colors.card }]}>{loading ? 'Updating...' : 'Update Password'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={{ alignSelf: 'center', marginTop: 12 }} onPress={() => router.replace('/auth')}>
